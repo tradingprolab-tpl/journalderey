@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal del Rey — Trading Pro Lab</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="assets/logo-blanco.png" />
+  <style>
+    .login-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--bg-base);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+    }
+    .login-tab {
+      flex: 1;
+      padding: 9px;
+      text-align: center;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all var(--transition);
+      font-family: var(--font-main);
+    }
+    .login-tab.active { background: var(--brand-orange); color: #fff; }
+
+    .form-section { display: none; }
+    .form-section.active { display: flex; flex-direction: column; gap: 16px; }
+
+    .access-denied {
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 0.8rem;
+      color: var(--red);
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .access-denied.show { display: flex; }
+
+    .success-msg {
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 0.8rem;
+      color: var(--green);
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .success-msg.show { display: flex; }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-base);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 9999;
+    }
+
+    .loading-screen img { width: 50px; opacity: 0.6; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+    .loading-screen p { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .theme-toggle-top {
+      position: fixed;
+      top: 16px; right: 16px;
+      z-index: 10;
+    }
+
+    .password-toggle {
+      position: relative;
+    }
+    .password-toggle .input { padding-right: 44px; }
+    .pwd-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%; transform: translateY(-50%);
+      background: none; border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+    }
+    .pwd-eye:hover { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div class="loading-screen" id="loadingScreen">
+  <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" />
+  <p>Cargando...</p>
+</div>
+
+<!-- Theme toggle -->
+<div class="theme-toggle-top">
+  <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema"></button>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Login page -->
+<div class="login-page" id="loginPage" style="display:none">
+  <div class="login-bg-glow"></div>
+  <div class="login-bg-glow-2"></div>
+
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="assets/logo-blanco.png" alt="Trading Pro Lab" class="logo-dark-mode" />
+      <div class="login-brand">Trading Pro Lab</div>
+      <div class="login-app">Journal <span>del Rey</span></div>
+    </div>
+
+    <!-- Tabs login / registro -->
+    <div class="login-tabs">
+      <button class="login-tab active" id="tabLogin" onclick="switchTab('login')">Ingresar</button>
+      <button class="login-tab" id="tabRegister" onclick="switchTab('register')">Registrarse</button>
+    </div>
+
+    <!-- Mensajes de error/éxito -->
+    <div class="access-denied" id="errorMsg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="errorText">Error desconocido.</span>
+    </div>
+
+    <div class="success-msg" id="successMsg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span id="successText">¡Listo!</span>
+    </div>
+
+    <!-- FORM LOGIN -->
+    <div class="form-section active" id="formLogin">
+      <div class="input-group">
+        <label class="input-label">Correo electrónico</label>
+        <input type="email" class="input" id="loginEmail" placeholder="tu@correo.com" autocomplete="email" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Contraseña</label>
+        <div class="password-toggle">
+          <input type="password" class="input" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+          <button class="pwd-eye" onclick="togglePwd('loginPassword', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-lg w-full" id="btnLogin" onclick="handleLogin()">
+        Ingresar al Journal
+      </button>
+    </div>
+
+    <!-- FORM REGISTRO -->
+    <div class="form-section" id="formRegister">
+      <div class="input-group">
+        <label class="input-label">Nombre completo</label>
+        <input type="text" class="input" id="regName" placeholder="Tu nombre" autocomplete="name" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Correo electrónico</label>
+        <input type="email" class="input" id="regEmail" placeholder="tu@correo.com" autocomplete="email" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Contraseña</label>
+        <div class="password-toggle">
+          <input type="password" class="input" id="regPassword" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+          <button class="pwd-eye" onclick="togglePwd('regPassword', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-lg w-full" id="btnRegister" onclick="handleRegister()">
+        Crear cuenta
+      </button>
+      <p style="text-align:center; font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+        Tu acceso debe estar habilitado por Williams antes de registrarte.
+      </p>
+    </div>
+
+    <div class="login-footer">
+      ©2024 Trading Pro Lab · Acceso exclusivo para Reyes y Príncipes
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, updateProfile
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // ──────────────────────────────────────────────────────────
+  // PEGA TUS CREDENCIALES DE FIREBASE AQUÍ
+  // ──────────────────────────────────────────────────────────
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBVxZcMxZNV7e79g-EbZwSmoHvyQ-XHH8A",
+    authDomain: "journal-del-rey.firebaseapp.com",
+    projectId: "journal-del-rey",
+    storageBucket: "journal-del-rey.firebasestorage.app",
+    messagingSenderId: "380863316017",
+    appId: "1:380863316017:web:a1dcdad1c5c2a9c1625510"
+  };
+  const ADMIN_UID = "TU_UID_ADMIN";
+  // ──────────────────────────────────────────────────────────
+
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Exponer para funciones globales
+  window._auth = auth;
+  window._db = db;
+  window._adminUID = ADMIN_UID;
+  window._firebase = {
+    createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp
+  };
+
+  // Verificar sesión activa
+  onAuthStateChanged(auth, async (user) => {
+    document.getElementById('loadingScreen').style.display = 'none';
+    if (user) {
+      // Verificar si tiene cuenta activa
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists() && userDoc.data().active !== false) {
+        window.location.href = 'cuentas.html';
+      } else {
+        await signOut(auth);
+        showError('Tu cuenta ha sido desactivada. Contacta a Williams.');
+        document.getElementById('loginPage').style.display = 'flex';
+      }
+    } else {
+      document.getElementById('loginPage').style.display = 'flex';
+    }
+  });
+
+  // ── LOGIN ──────────────────────────────────────────────────
+  window.handleLogin = async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('btnLogin');
+
+    if (!email || !password) { showError('Completa todos los campos.'); return; }
+    if (!isValidEmail(email)) { showError('Ingresa un correo válido.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader"></div>';
+    clearMessages();
+
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
+
+      if (!userDoc.exists() || userDoc.data().active === false) {
+        await signOut(auth);
+        showError('Tu acceso ha sido desactivado. Contacta a Williams.');
+        return;
+      }
+      // onAuthStateChanged redirige
+    } catch (err) {
+      showError(getFirebaseError(err.code));
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Ingresar al Journal';
+    }
+  };
+
+  // ── REGISTRO ───────────────────────────────────────────────
+  window.handleRegister = async function() {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
+    const password = document.getElementById('regPassword').value;
+    const btn = document.getElementById('btnRegister');
+
+    if (!name || !email || !password) { showError('Completa todos los campos.'); return; }
+    if (!isValidEmail(email)) { showError('Ingresa un correo válido.'); return; }
+    if (password.length < 6) { showError('La contraseña debe tener al menos 6 caracteres.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader"></div>';
+    clearMessages();
+
+    try {
+      // Verificar si el email está en la lista blanca
+      const allowedQ = query(
+        collection(db, 'allowedEmails'),
+        where('email', '==', email),
+        where('active', '==', true)
+      );
+      const allowed = await getDocs(allowedQ);
+
+      if (allowed.empty) {
+        showError('Tu correo no está habilitado. Contacta a Williams para obtener acceso.');
+        return;
+      }
+
+      // Crear usuario en Firebase Auth
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
+
+      // Crear documento en Firestore
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        email,
+        displayName: name,
+        role: 'user',
+        active: true,
+        createdAt: serverTimestamp()
+      });
+
+      showSuccess('¡Cuenta creada! Ingresando...');
+      // onAuthStateChanged redirige automáticamente
+
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        showError('Este correo ya tiene una cuenta. Intenta ingresar.');
+      } else {
+        showError(getFirebaseError(err.code));
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Crear cuenta';
+    }
+  };
+
+  // Helpers
+  function getFirebaseError(code) {
+    const errors = {
+      'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+      'auth/user-not-found': 'No existe una cuenta con ese correo.',
+      'auth/wrong-password': 'Contraseña incorrecta.',
+      'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+      'auth/network-request-failed': 'Error de conexión. Revisa tu internet.',
+      'auth/invalid-email': 'El formato del correo no es válido.',
+    };
+    return errors[code] || 'Ocurrió un error. Intenta de nuevo.';
+  }
+
+  function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+</script>
+
+<script>
+  // ── Tema ───────────────────────────────────────────────────
+  const savedTheme = localStorage.getItem('tpl-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tpl-theme', next);
+    // Invertir logo en modo claro
+    const logos = document.querySelectorAll('.logo-dark-mode');
+    logos.forEach(l => l.style.filter = next === 'light' ? 'invert(1)' : '');
+  });
+
+  // Aplicar filtro logo al cargar si modo claro
+  if (savedTheme === 'light') {
+    document.querySelectorAll('.logo-dark-mode').forEach(l => l.style.filter = 'invert(1)');
+  }
+
+  // ── Tabs login/register ────────────────────────────────────
+  window.switchTab = function(tab) {
+    clearMessages();
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+    document.getElementById('tab' + (tab === 'login' ? 'Login' : 'Register')).classList.add('active');
+    document.getElementById('form' + (tab === 'login' ? 'Login' : 'Register')).classList.add('active');
+  };
+
+  // ── Password toggle ────────────────────────────────────────
+  window.togglePwd = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const isText = input.type === 'text';
+    input.type = isText ? 'password' : 'text';
+    btn.innerHTML = isText
+      ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+      : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+  };
+
+  // ── Mensajes ───────────────────────────────────────────────
+  window.showError = function(msg) {
+    const el = document.getElementById('errorMsg');
+    document.getElementById('errorText').textContent = msg;
+    el.classList.add('show');
+  };
+
+  window.showSuccess = function(msg) {
+    const el = document.getElementById('successMsg');
+    document.getElementById('successText').textContent = msg;
+    el.classList.add('show');
+  };
+
+  window.clearMessages = function() {
+    document.getElementById('errorMsg').classList.remove('show');
+    document.getElementById('successMsg').classList.remove('show');
+  };
+
+  // Enter key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const active = document.querySelector('.form-section.active');
+      if (active?.id === 'formLogin') handleLogin?.();
+      else if (active?.id === 'formRegister') handleRegister?.();
+    }
+  });
+</script>
+</body>
+</html>
