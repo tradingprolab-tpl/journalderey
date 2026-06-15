@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nueva Cuenta — Journal del Rey</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="assets/logo-blanco.png" />
+  <style>
+    .new-account-layout {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .step-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: all var(--transition);
+    }
+
+    .step.active .step-num {
+      border-color: var(--brand-orange);
+      background: var(--brand-orange);
+      color: #fff;
+    }
+
+    .step.done .step-num {
+      border-color: var(--green);
+      background: var(--green);
+      color: #fff;
+    }
+
+    .step-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .step.active .step-label { color: var(--text-primary); }
+    .step.done .step-label { color: var(--green); }
+
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 8px;
+    }
+
+    .step-line.done { background: var(--green); }
+
+    /* Form sections */
+    .form-step { display: none; }
+    .form-step.active { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Projection box */
+    .projection-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .projection-box .proj-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--brand-orange);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .proj-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .proj-item {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+    }
+
+    .proj-item .proj-label {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .proj-item .proj-val {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+    }
+
+    .proj-item .proj-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Type selector cards */
+    .type-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .type-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+    }
+
+    .type-card:hover { border-color: var(--brand-orange); }
+    .type-card.selected { border-color: var(--brand-orange); background: var(--brand-orange-dim); }
+
+    .type-card-icon {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+
+    .type-card h3 { font-size: 0.9rem; margin-bottom: 4px; }
+    .type-card p { font-size: 0.72rem; }
+
+    /* Nav buttons */
+    .step-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .fondeo-rules {
+      background: var(--yellow-dim);
+      border: 1px solid var(--yellow);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .fondeo-rules p {
+      font-size: 0.75rem;
+      color: var(--yellow);
+      font-weight: 500;
+    }
+
+    .fondeo-input-group {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .fondeo-input-group.show { display: flex; }
+
+    @media (max-width: 520px) {
+      .type-cards { grid-template-columns: 1fr; }
+      .proj-grid { grid-template-columns: 1fr 1fr; }
+      .step-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="loading-screen" id="loadingScreen">
+  <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" />
+  <p>Cargando...</p>
+</div>
+
+<div class="app-layout" id="appLayout" style="display:none">
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" width="36" height="36" />
+      <div class="sidebar-logo-text">
+        <span class="brand-name">Trading Pro Lab</span>
+        <span class="brand-sub">Journal del Rey</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a class="nav-item" href="cuentas.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Mis Cuentas
+      </a>
+      <a class="nav-item active" href="nueva-cuenta.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Nueva Cuenta
+      </a>
+      <div class="nav-section-label" style="margin-top:8px">Cuenta</div>
+      <a class="nav-item" href="perfil.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Mi Perfil
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="nav-item" onclick="handleLogout()" style="cursor:pointer;color:var(--red)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </div>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="topbar-breadcrumb">
+        <a href="cuentas.html" style="color:var(--text-muted);text-decoration:none">Mis Cuentas</a>
+        <span style="margin:0 6px;color:var(--text-muted)">/</span>
+        <span>Nueva Cuenta</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema"></button>
+      <div class="avatar" id="userAvatar">?</div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="new-account-layout">
+
+      <div style="margin-bottom:24px">
+        <h1>Nueva Cuenta</h1>
+        <p style="margin-top:4px">Configura los datos base. No podrás modificarlos después.</p>
+      </div>
+
+      <!-- Steps -->
+      <div class="step-indicator">
+        <div class="step active" id="step-ind-1">
+          <div class="step-num">1</div>
+          <span class="step-label">Tipo</span>
+        </div>
+        <div class="step-line" id="line-1"></div>
+        <div class="step" id="step-ind-2">
+          <div class="step-num">2</div>
+          <span class="step-label">Capital</span>
+        </div>
+        <div class="step-line" id="line-2"></div>
+        <div class="step" id="step-ind-3">
+          <div class="step-num">3</div>
+          <span class="step-label">Estrategia</span>
+        </div>
+        <div class="step-line" id="line-3"></div>
+        <div class="step" id="step-ind-4">
+          <div class="step-num">4</div>
+          <span class="step-label">Proyección</span>
+        </div>
+      </div>
+
+      <!-- STEP 1: Tipo de cuenta -->
+      <div class="form-step active" id="step1">
+        <div>
+          <h2 style="margin-bottom:6px">¿Qué tipo de cuenta es?</h2>
+          <p>Esto determina las reglas y métricas que se calcularán.</p>
+        </div>
+
+        <div class="type-cards">
+          <div class="type-card" id="type-fondeo" onclick="selectType('fondeo')">
+            <div class="type-card-icon">🏦</div>
+            <h3>Fondeo</h3>
+            <p>Prop firm. Con reglas de drawdown diario y máximo.</p>
+          </div>
+          <div class="type-card" id="type-personal" onclick="selectType('personal')">
+            <div class="type-card-icon">💼</div>
+            <h3>Capital Real</h3>
+            <p>Tu propio dinero. Sin restricciones de prop firm.</p>
+          </div>
+        </div>
+
+        <div class="fondeo-input-group" id="fondeoExtras">
+          <div class="fondeo-rules">
+            <p>⚠️ Las métricas de fondeo (Daily Drawdown Remaining, Buffer de Seguridad, Estado de cuenta) se activarán automáticamente.</p>
+          </div>
+          <div class="grid-2">
+            <div class="input-group">
+              <label class="input-label">Prop Firm</label>
+              <input type="text" class="input" id="propFirmName" placeholder="Ej: FTMO, The5ers..." />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Drawdown Diario Máximo %</label>
+              <input type="number" class="input" id="dailyDDLimit" placeholder="5" min="1" max="20" step="0.5" />
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Drawdown Máximo Total %</label>
+            <input type="number" class="input" id="maxDDLimit" placeholder="10" min="1" max="50" step="0.5" />
+          </div>
+        </div>
+
+        <div class="step-nav">
+          <div></div>
+          <button class="btn btn-primary" onclick="goStep(2)" id="btnStep1">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Capital -->
+      <div class="form-step" id="step2">
+        <div>
+          <h2 style="margin-bottom:6px">Capital de la cuenta</h2>
+          <p>El tamaño inicial de la cuenta no se podrá cambiar.</p>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Nombre de la cuenta</label>
+          <input type="text" class="input" id="accountName" placeholder="Ej: FTMO Challenge 10K, Mi cuenta Oanda..." />
+        </div>
+
+        <div class="grid-2">
+          <div class="input-group">
+            <label class="input-label">Tamaño de cuenta (USD)</label>
+            <input type="number" class="input" id="accountSize" placeholder="10000" min="100" oninput="updateProjections()" />
+          </div>
+          <div class="input-group">
+            <label class="input-label">Moneda</label>
+            <select class="input" id="accountCurrency">
+              <option value="USD">USD — Dólar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — Libra</option>
+              <option value="MXN">MXN — Peso Mexicano</option>
+              <option value="COP">COP — Peso Colombiano</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="goStep(1)">← Atrás</button>
+          <button class="btn btn-primary" onclick="goStep(3)">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Estrategia -->
+      <div class="form-step" id="step3">
+        <div>
+          <h2 style="margin-bottom:6px">Estrategia y metas</h2>
+          <p>Define cómo vas a operar esta cuenta.</p>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Estrategia principal</label>
+          <input type="text" class="input" id="strategy" placeholder="Ej: TPL, SMC, ICT, Estrategia propia..." />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Meta de crecimiento (%)</label>
+          <p style="font-size:0.72rem;margin-bottom:8px">¿A qué porcentaje deseas escalar esta cuenta?</p>
+          <input type="number" class="input" id="goalPct" placeholder="100" min="1" max="10000" oninput="updateProjections()" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Winrate esperado: <span id="winrateDisplay" style="color:var(--brand-orange);font-family:var(--font-mono)">7/10</span></label>
+          <p style="font-size:0.72rem;margin-bottom:10px">¿Cuántas operaciones de 10 ganas normalmente?</p>
+          <input type="range" id="winrateSlider" min="1" max="10" value="7" oninput="updateWinrate(this.value)" />
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-muted);margin-top:4px">
+            <span>1/10</span><span>5/10</span><span>10/10</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">RR promedio esperado</label>
+          <div class="choice-group" id="rrGroup">
+            <button class="choice-btn" onclick="selectRR('0.5R', this)">0.5R</button>
+            <button class="choice-btn selected" onclick="selectRR('1R', this)">1R</button>
+            <button class="choice-btn" onclick="selectRR('1.5R', this)">1.5R</button>
+            <button class="choice-btn" onclick="selectRR('2R', this)">2R</button>
+            <button class="choice-btn" onclick="selectRR('3R', this)">3R</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Riesgo por operación (%)</label>
+          <div class="choice-group" id="riskGroup">
+            <button class="choice-btn" onclick="selectRisk('0.5', this)">0.5%</button>
+            <button class="choice-btn selected" onclick="selectRisk('1', this)">1%</button>
+            <button class="choice-btn" onclick="selectRisk('2', this)">2%</button>
+            <button class="choice-btn" onclick="selectRisk('3', this)">3%</button>
+          </div>
+        </div>
+
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="goStep(2)">← Atrás</button>
+          <button class="btn btn-primary" onclick="goStep(4)">Ver Proyección →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Proyección -->
+      <div class="form-step" id="step4">
+        <div>
+          <h2 style="margin-bottom:6px">Proyección estadística</h2>
+          <p>Basada en tus datos. No se podrá modificar después de crear la cuenta.</p>
+        </div>
+
+        <div class="projection-box">
+          <div class="proj-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Hoja de ruta hacia tu meta
+          </div>
+
+          <div class="proj-grid">
+            <div class="proj-item">
+              <div class="proj-label">Objetivo monetario</div>
+              <div class="proj-val" id="projGoalUSD">$—</div>
+              <div class="proj-sub" id="projGoalPct">—% de crecimiento</div>
+            </div>
+            <div class="proj-item">
+              <div class="proj-label">Tiempo estimado</div>
+              <div class="proj-val" id="projTime">— meses</div>
+              <div class="proj-sub" id="projTrades">— trades necesarios</div>
+            </div>
+            <div class="proj-item">
+              <div class="proj-label">Ganancia diaria necesaria</div>
+              <div class="proj-val" id="projDaily">$—</div>
+              <div class="proj-sub" id="projDailyPct">—% diario</div>
+            </div>
+            <div class="proj-item">
+              <div class="proj-label">Ganancia semanal</div>
+              <div class="proj-val" id="projWeekly">$—</div>
+              <div class="proj-sub" id="projWeeklyPct">—% semanal</div>
+            </div>
+            <div class="proj-item">
+              <div class="proj-label">Ganancia mensual</div>
+              <div class="proj-val" id="projMonthly">$—</div>
+              <div class="proj-sub" id="projMonthlyPct">—% mensual</div>
+            </div>
+            <div class="proj-item">
+              <div class="proj-label">Probabilidad de éxito</div>
+              <div class="proj-val" id="projProb">—%</div>
+              <div class="proj-sub">Expectancy positivo</div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:6px">
+              <span style="color:var(--text-muted)">Expectancy por trade</span>
+              <span style="font-family:var(--font-mono);font-weight:700;color:var(--brand-orange)" id="projExpectancy">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem">
+              <span style="color:var(--text-muted)">Profit Factor estimado</span>
+              <span style="font-family:var(--font-mono);font-weight:700;color:var(--brand-orange)" id="projPF">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="goStep(3)">← Atrás</button>
+          <button class="btn btn-primary btn-lg" onclick="createAccount()" id="btnCreate">
+            Crear cuenta y comenzar
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // ── PEGA TUS CREDENCIALES AQUÍ ────────────────────────────
+  const FIREBASE_CONFIG = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_PROYECTO.firebaseapp.com",
+    projectId: "TU_PROYECTO_ID",
+    storageBucket: "TU_PROYECTO.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+  };
+  // ─────────────────────────────────────────────────────────
+
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  let currentUser = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (!userDoc.exists() || userDoc.data().active === false) {
+      await signOut(auth); window.location.href = 'index.html'; return;
+    }
+    currentUser = user;
+    const name = userDoc.data().displayName || 'Rey';
+    document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appLayout').style.display = 'flex';
+  });
+
+  window.handleLogout = async () => { await signOut(auth); window.location.href = 'index.html'; };
+
+  window.createAccount = async function() {
+    const btn = document.getElementById('btnCreate');
+    if (!currentUser) return;
+
+    const type = window._selectedType;
+    const name = document.getElementById('accountName').value.trim();
+    const size = parseFloat(document.getElementById('accountSize').value);
+    const currency = document.getElementById('accountCurrency').value;
+    const strategy = document.getElementById('strategy').value.trim();
+    const goalPct = parseFloat(document.getElementById('goalPct').value);
+    const winrate = parseInt(document.getElementById('winrateSlider').value);
+    const rr = window._selectedRR || '1R';
+    const risk = parseFloat(window._selectedRisk || '1');
+
+    if (!type) { showToast('Selecciona el tipo de cuenta.', 'error'); goStep(1); return; }
+    if (!name) { showToast('Escribe un nombre para la cuenta.', 'error'); goStep(2); return; }
+    if (!size || size < 100) { showToast('Ingresa un tamaño de cuenta válido.', 'error'); goStep(2); return; }
+    if (!strategy) { showToast('Escribe tu estrategia.', 'error'); goStep(3); return; }
+    if (!goalPct || goalPct < 1) { showToast('Ingresa tu meta de crecimiento.', 'error'); goStep(3); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader"></div> Creando...';
+
+    try {
+      const accountData = {
+        name, type, size, currency, strategy,
+        goalPct, winrateExpected: winrate / 10,
+        rrExpected: rr, riskPerTrade: risk,
+        createdAt: serverTimestamp(),
+        active: true,
+      };
+
+      if (type === 'fondeo') {
+        accountData.propFirm = document.getElementById('propFirmName').value.trim();
+        accountData.dailyDDLimit = parseFloat(document.getElementById('dailyDDLimit').value) || 5;
+        accountData.maxDDLimit = parseFloat(document.getElementById('maxDDLimit').value) || 10;
+      }
+
+      const ref = await addDoc(collection(db, 'users', currentUser.uid, 'accounts'), accountData);
+      showToast('¡Cuenta creada! Redirigiendo...', 'success');
+      setTimeout(() => { window.location.href = `dashboard.html?id=${ref.id}`; }, 1200);
+    } catch(e) {
+      showToast('Error al crear la cuenta. Intenta de nuevo.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = 'Crear cuenta y comenzar';
+    }
+  };
+</script>
+
+<script>
+  // Tema
+  const savedTheme = localStorage.getItem('tpl-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  if (savedTheme === 'light') document.querySelectorAll('.logo-dark-mode').forEach(l => l.style.filter = 'invert(1)');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tpl-theme', next);
+    document.querySelectorAll('.logo-dark-mode').forEach(l => l.style.filter = next === 'light' ? 'invert(1)' : '');
+  });
+
+  // Sidebar
+  window.toggleSidebar = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); };
+  window.closeSidebar = () => { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); };
+
+  // State
+  window._selectedType = null;
+  window._selectedRR = '1R';
+  window._selectedRisk = '1';
+
+  // Steps
+  let currentStep = 1;
+
+  window.goStep = function(n) {
+    // Validaciones
+    if (n === 2 && !window._selectedType) { showToast('Selecciona el tipo de cuenta.', 'error'); return; }
+    if (n === 4) updateProjections();
+
+    document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+
+    for (let i = 1; i <= 4; i++) {
+      const ind = document.getElementById('step-ind-' + i);
+      const line = document.getElementById('line-' + i);
+      ind.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+      if (line) line.className = 'step-line' + (i < n ? ' done' : '');
+    }
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.selectType = function(type) {
+    window._selectedType = type;
+    document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('type-' + type).classList.add('selected');
+    const extras = document.getElementById('fondeoExtras');
+    extras.className = 'fondeo-input-group' + (type === 'fondeo' ? ' show' : '');
+  };
+
+  window.updateWinrate = function(val) {
+    document.getElementById('winrateDisplay').textContent = val + '/10';
+    updateProjections();
+  };
+
+  window.selectRR = function(rr, btn) {
+    window._selectedRR = rr;
+    document.querySelectorAll('#rrGroup .choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    updateProjections();
+  };
+
+  window.selectRisk = function(risk, btn) {
+    window._selectedRisk = risk;
+    document.querySelectorAll('#riskGroup .choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    updateProjections();
+  };
+
+  window.updateProjections = function() {
+    const size = parseFloat(document.getElementById('accountSize').value) || 0;
+    const goalPct = parseFloat(document.getElementById('goalPct').value) || 0;
+    const winrate = parseInt(document.getElementById('winrateSlider').value) / 10;
+    const rrStr = window._selectedRR || '1R';
+    const rr = parseFloat(rrStr.replace('R', ''));
+    const risk = parseFloat(window._selectedRisk || '1') / 100;
+
+    const goalUSD = size * (goalPct / 100);
+    const lossRate = 1 - winrate;
+    const avgGain = size * risk * rr;
+    const avgLoss = size * risk;
+    const expectancy = (winrate * avgGain) - (lossRate * avgLoss);
+    const pf = lossRate > 0 ? (winrate * rr) / lossRate : 99;
+
+    const tradesNeeded = expectancy > 0 ? Math.ceil(goalUSD / expectancy) : 999;
+    // ~3 trades/semana → semanas → meses
+    const weeks = Math.ceil(tradesNeeded / 3);
+    const months = Math.max(1, Math.ceil(weeks / 4));
+
+    const tradingDays = months * 20;
+    const dailyUSD = size > 0 ? goalUSD / tradingDays : 0;
+    const weeklyUSD = dailyUSD * 5;
+    const monthlyUSD = dailyUSD * 20;
+
+    const prob = expectancy > 0 ? Math.min(95, 50 + winrate * 40) : 10;
+
+    document.getElementById('projGoalUSD').textContent = '$' + goalUSD.toLocaleString('en-US', {maximumFractionDigits:2});
+    document.getElementById('projGoalPct').textContent = goalPct + '% de crecimiento';
+    document.getElementById('projTime').textContent = months + (months === 1 ? ' mes' : ' meses');
+    document.getElementById('projTrades').textContent = tradesNeeded + ' trades necesarios';
+    document.getElementById('projDaily').textContent = '$' + dailyUSD.toFixed(2);
+    document.getElementById('projDailyPct').textContent = (size > 0 ? (dailyUSD/size*100).toFixed(3) : '0') + '% diario';
+    document.getElementById('projWeekly').textContent = '$' + weeklyUSD.toFixed(2);
+    document.getElementById('projWeeklyPct').textContent = (size > 0 ? (weeklyUSD/size*100).toFixed(2) : '0') + '% semanal';
+    document.getElementById('projMonthly').textContent = '$' + monthlyUSD.toFixed(2);
+    document.getElementById('projMonthlyPct').textContent = (size > 0 ? (monthlyUSD/size*100).toFixed(2) : '0') + '% mensual';
+    document.getElementById('projProb').textContent = prob.toFixed(1) + '%';
+    document.getElementById('projExpectancy').textContent = '$' + expectancy.toFixed(2) + '/trade';
+    document.getElementById('projPF').textContent = pf.toFixed(2);
+  };
+
+  // Toast
+  window.showToast = function(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  };
+</script>
+</body>
+</html>
