@@ -1,0 +1,60 @@
+// ============================================================
+// FIRESTORE SECURITY RULES — Journal del Rey
+// Trading Pro Lab
+// ============================================================
+// INSTRUCCIONES:
+// 1. Ve a Firebase Console → Firestore Database → Rules
+// 2. Copia y pega estas reglas completas
+// 3. Haz clic en "Publicar"
+// ============================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Función helper: verificar si el usuario está autenticado ──
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // ── Función helper: verificar si es el admin ──────────────────
+    // IMPORTANTE: Reemplaza "VvDyaCX7x1XxQIBDKpghd4UfWai1" con tu UID real de Firebase
+    function isAdmin() {
+      return isAuth() && request.auth.uid == "VvDyaCX7x1XxQIBDKpghd4UfWai1";
+    }
+
+    // ── Función helper: verificar si el usuario es el dueño ───────
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // ── /users/{uid} — Datos del trader ──────────────────────────
+    match /users/{uid} {
+      // El usuario solo puede leer y editar su propio documento
+      // El admin puede leer todos
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+
+      // ── /users/{uid}/accounts/{accountId} — Cuentas ────────────
+      match /accounts/{accountId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+
+        // ── /users/{uid}/accounts/{accountId}/trades/{tradeId} ───
+        match /trades/{tradeId} {
+          allow read, write: if isOwner(uid) || isAdmin();
+        }
+      }
+    }
+
+    // ── /allowedEmails — Lista blanca de acceso ───────────────────
+    match /allowedEmails/{docId} {
+      // Solo el admin puede escribir
+      allow write: if isAdmin();
+      // Cualquier usuario autenticado puede leer (para verificar su email al registrarse)
+      allow read: if isAuth();
+    }
+  }
+}
