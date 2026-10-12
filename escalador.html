@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escalador TPL — Journal del Rey</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="assets/logo-blanco.png" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Escalador UI ─────────────────────────────────────── */
+    .esc-hero {
+      background: linear-gradient(135deg, #0d0d0d 0%, #1a1000 100%);
+      border: 1px solid #2a1f00;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .esc-hero-title {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #d4a017;
+      margin-bottom: 4px;
+    }
+    .esc-hero h1 { font-size: 1.4rem; color: var(--text-primary); margin-bottom: 4px; }
+    .esc-hero p { font-size: 0.8rem; color: var(--text-muted); max-width: 480px; }
+
+    /* Selector de cuenta */
+    .account-selector-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .account-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .acc-sel-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--bg-base);
+    }
+    .acc-sel-card:hover { border-color: #d4a017; }
+    .acc-sel-card.selected { border-color: #d4a017; background: rgba(212,160,23,0.08); }
+    .acc-sel-card .acc-name { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .acc-sel-card .acc-size { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: #d4a017; }
+    .acc-sel-card .acc-meta { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+    .acc-sel-card .acc-pnl { font-size: 0.75rem; font-weight: 700; margin-top: 6px; }
+
+    /* Tabs del escalador */
+    .esc-tabs { display:flex; gap:2px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:4px; margin-bottom:24px; overflow-x:auto; }
+    .esc-tab { padding:8px 16px; border-radius:var(--radius-sm); font-size:0.75rem; font-weight:700; cursor:pointer; border:none; background:transparent; color:var(--text-muted); transition:all var(--transition); font-family:var(--font-main); white-space:nowrap; }
+    .esc-tab.active { background:#d4a017; color:#000; }
+    .esc-tab:hover:not(.active) { color:var(--text-primary); }
+
+    .esc-tab-content { display:none; }
+    .esc-tab-content.active { display:block; }
+
+    /* KPI cards del escalador */
+    .esc-kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; transition:all var(--transition); }
+    .esc-kpi:hover { border-color:#d4a017; }
+    .esc-kpi .ek-label { font-size:0.6rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+    .esc-kpi .ek-val { font-family:var(--font-mono); font-size:1.3rem; font-weight:700; color:var(--text-primary); line-height:1; }
+    .esc-kpi .ek-sub { font-size:0.65rem; color:var(--text-muted); margin-top:4px; }
+    .esc-kpi .ek-val.gold { color:#d4a017; }
+    .esc-kpi .ek-val.green { color:var(--green); }
+    .esc-kpi .ek-val.red { color:var(--red); }
+
+    /* Elegibilidad */
+    .eligibility-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 18px; border-radius:99px;
+      font-size:0.78rem; font-weight:700;
+    }
+    .eligibility-badge.apto { background:var(--green-dim); color:var(--green); border:1px solid var(--green); }
+    .eligibility-badge.no-apto { background:var(--red-dim); color:var(--red); border:1px solid var(--red); }
+    .eligibility-badge.insuf { background:rgba(212,160,23,0.1); color:#d4a017; border:1px solid #d4a017; }
+
+    /* Criterios */
+    .criteria-list { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+    .criteria-item {
+      display:flex; align-items:center; gap:12px;
+      padding:10px 14px; border-radius:var(--radius-md);
+      background:var(--bg-base); border:1px solid var(--border);
+      font-size:0.78rem;
+    }
+    .criteria-item .ci-icon { font-size:1rem; flex-shrink:0; }
+    .criteria-item .ci-label { flex:1; color:var(--text-secondary); }
+    .criteria-item .ci-val { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; }
+    .criteria-item.pass { border-color:rgba(34,197,94,0.3); }
+    .criteria-item.pass .ci-val { color:var(--green); }
+    .criteria-item.fail { border-color:rgba(239,68,68,0.3); }
+    .criteria-item.fail .ci-val { color:var(--red); }
+    .criteria-item.warn { border-color:rgba(212,160,23,0.3); }
+    .criteria-item.warn .ci-val { color:#d4a017; }
+
+    /* Escalera de riesgo */
+    .risk-ladder { display:flex; flex-direction:column; gap:6px; }
+    .risk-level {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px; border-radius:var(--radius-md);
+      border:1px solid var(--border); background:var(--bg-base);
+      transition:all var(--transition);
+    }
+    .risk-level.current { border-color:#d4a017; background:rgba(212,160,23,0.08); }
+    .risk-level.unlocked { border-color:rgba(34,197,94,0.3); background:var(--green-dim); }
+    .risk-level.locked { opacity:0.5; }
+    .risk-pct { font-family:var(--font-mono); font-size:1rem; font-weight:700; min-width:48px; }
+    .risk-level.current .risk-pct { color:#d4a017; }
+    .risk-level.unlocked .risk-pct { color:var(--green); }
+    .risk-desc { flex:1; font-size:0.75rem; color:var(--text-muted); }
+    .risk-badge { font-size:0.62rem; font-weight:700; padding:3px 8px; border-radius:99px; }
+
+    /* Hitos / Roadmap */
+    .milestones { display:flex; flex-direction:column; gap:12px; }
+    .milestone {
+      display:flex; gap:16px; align-items:flex-start;
+      padding:16px; border-radius:var(--radius-md);
+      border:1px solid var(--border); background:var(--bg-base);
+    }
+    .milestone.reached { border-color:rgba(34,197,94,0.4); background:var(--green-dim); }
+    .milestone.current { border-color:#d4a017; background:rgba(212,160,23,0.06); }
+    .milestone-num {
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.75rem; font-weight:700;
+      background:var(--border); color:var(--text-muted);
+    }
+    .milestone.reached .milestone-num { background:var(--green); color:#fff; }
+    .milestone.current .milestone-num { background:#d4a017; color:#000; }
+    .milestone-body { flex:1; }
+    .milestone-title { font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
+    .milestone-desc { font-size:0.72rem; color:var(--text-muted); }
+    .milestone-meta { font-size:0.68rem; color:#d4a017; margin-top:6px; font-weight:600; }
+
+    /* Allocation */
+    .alloc-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .alloc-item {
+      padding:14px; border-radius:var(--radius-md);
+      border:1px solid var(--border); background:var(--bg-base);
+    }
+    .alloc-item .ai-label { font-size:0.65rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+    .alloc-item .ai-pct { font-size:1.4rem; font-family:var(--font-mono); font-weight:700; color:#d4a017; }
+    .alloc-item .ai-usd { font-size:0.75rem; color:var(--text-muted); margin-top:2px; font-family:var(--font-mono); }
+    .alloc-slider { width:100%; margin-top:8px; }
+
+    /* Simulación */
+    .sim-config { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+    .profile-btns { display:flex; gap:6px; flex-wrap:wrap; }
+    .profile-btn {
+      padding:8px 16px; border-radius:var(--radius-sm);
+      border:1px solid var(--border); background:transparent;
+      color:var(--text-muted); font-size:0.75rem; font-weight:700;
+      cursor:pointer; font-family:var(--font-main); transition:all var(--transition);
+    }
+    .profile-btn.active { background:#d4a017; color:#000; border-color:#d4a017; }
+
+    /* Mensaje de próxima acción */
+    .next-action {
+      background:linear-gradient(135deg,rgba(212,160,23,0.1),rgba(212,160,23,0.03));
+      border:1px solid rgba(212,160,23,0.4);
+      border-radius:var(--radius-lg);
+      padding:20px 24px;
+      display:flex; gap:16px; align-items:flex-start;
+      margin-bottom:24px;
+    }
+    .next-action-icon { font-size:1.5rem; flex-shrink:0; }
+    .next-action-title { font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#d4a017; margin-bottom:4px; }
+    .next-action-text { font-size:0.88rem; color:var(--text-primary); font-weight:500; line-height:1.5; }
+
+    /* Estado sin cuenta seleccionada */
+    .no-account-state {
+      text-align:center; padding:60px 20px;
+      color:var(--text-muted);
+    }
+    .no-account-state .na-icon { font-size:3rem; margin-bottom:16px; }
+    .no-account-state h3 { color:var(--text-secondary); margin-bottom:8px; }
+
+    /* Fondeo tiers */
+    .tier-card {
+      background:var(--bg-base); border:1px solid var(--border);
+      border-radius:var(--radius-md); padding:16px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .tier-card .tc-size { font-family:var(--font-mono); font-size:1.1rem; font-weight:700; color:#d4a017; }
+    .tier-card .tc-cost { font-size:0.72rem; color:var(--text-muted); }
+    .tier-card .tc-prob { font-size:0.82rem; font-weight:700; }
+
+    @media(max-width:640px) {
+      .sim-config { grid-template-columns:1fr; }
+      .alloc-grid { grid-template-columns:1fr; }
+      .account-selector-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="loading-screen" id="loadingScreen">
+  <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" />
+  <p>Cargando escalador...</p>
+</div>
+
+<div class="app-layout" id="appLayout" style="display:none">
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" width="36" height="36" />
+      <div class="sidebar-logo-text">
+        <span class="brand-name">Trading Pro Lab</span>
+        <span class="brand-sub">Journal del Rey</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a class="nav-item" href="cuentas.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Mis Cuentas
+      </a>
+      <a class="nav-item" href="nueva-cuenta.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Nueva Cuenta
+      </a>
+      <a class="nav-item active" href="escalador.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Escalador
+      </a>
+      <div class="nav-section-label" style="margin-top:8px">Cuenta</div>
+      <a class="nav-item" href="perfil.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Mi Perfil
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="nav-item" onclick="handleLogout()" style="cursor:pointer;color:var(--red)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </div>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú"><span></span><span></span><span></span></button>
+      <div class="topbar-breadcrumb"><span>Escalador TPL</span></div>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema"></button>
+      <div class="avatar" id="userAvatar">?</div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Hero -->
+    <div class="esc-hero">
+      <div>
+        <div class="esc-hero-title">⚡ Sistema de Escalamiento</div>
+        <h1>Escalador TPL</h1>
+        <p>Conectado a tu Journal. Te dice qué hacer con tu capital, cuándo subir el riesgo, cómo distribuir ganancias y cuál es tu próximo hito real.</p>
+      </div>
+      <div style="text-align:right">
+        <div class="label-xs" style="margin-bottom:4px">Cuentas cargadas</div>
+        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:#d4a017" id="escTotalAccounts">—</div>
+      </div>
+    </div>
+
+    <!-- Selector de cuenta -->
+    <div class="account-selector-wrap">
+      <div class="flex-between">
+        <div>
+          <div class="section-title">Selecciona una cuenta para escalar</div>
+          <p style="font-size:0.72rem;margin-top:4px">El escalador usa los datos reales de esa cuenta.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAccounts()">↻ Actualizar</button>
+      </div>
+      <div class="account-selector-grid" id="accountSelectorGrid">
+        <div style="color:var(--text-muted);font-size:0.8rem;padding:20px">Cargando cuentas...</div>
+      </div>
+    </div>
+
+    <!-- Estado vacío cuando no hay cuenta seleccionada -->
+    <div class="no-account-state" id="noAccountState">
+      <div class="na-icon">📊</div>
+      <h3>Selecciona una cuenta arriba</h3>
+      <p>El escalador analizará tus datos reales y te dirá exactamente qué hacer a continuación.</p>
+    </div>
+
+    <!-- Contenido del escalador (se muestra cuando hay cuenta seleccionada) -->
+    <div id="escaladorContent" style="display:none">
+
+      <!-- Próxima acción -->
+      <div class="next-action" id="nextActionBox">
+        <div class="next-action-icon">🎯</div>
+        <div>
+          <div class="next-action-title">Tu próxima acción</div>
+          <div class="next-action-text" id="nextActionText">Analizando...</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="esc-tabs">
+        <button class="esc-tab active" onclick="showEscTab('resumen')">📊 Resumen</button>
+        <button class="esc-tab" onclick="showEscTab('riesgo')">⚡ Riesgo</button>
+        <button class="esc-tab" onclick="showEscTab('hitos')">🏆 Hitos</button>
+        <button class="esc-tab" onclick="showEscTab('distribucion')">💰 Distribución</button>
+        <button class="esc-tab" onclick="showEscTab('fondeo')">🏦 Fondeo</button>
+        <button class="esc-tab" onclick="showEscTab('simulacion')">🎲 Simulación</button>
+      </div>
+
+      <!-- TAB RESUMEN -->
+      <div class="esc-tab-content active" id="esc-resumen">
+        <div class="grid-kpi" style="margin-bottom:20px">
+          <div class="esc-kpi"><div class="ek-label">Equity Actual</div><div class="ek-val gold" id="escEquity">$—</div><div class="ek-sub" id="escEquitySub">Base: —</div></div>
+          <div class="esc-kpi"><div class="ek-label">Profit Neto</div><div class="ek-val" id="escPnl">$—</div><div class="ek-sub" id="escPnlPct">—%</div></div>
+          <div class="esc-kpi"><div class="ek-label">Win Rate Real</div><div class="ek-val" id="escWR">—%</div><div class="ek-sub" id="escWRsub">— trades</div></div>
+          <div class="esc-kpi"><div class="ek-label">Expectancy</div><div class="ek-val" id="escExp">$—</div><div class="ek-sub">Por trade</div></div>
+          <div class="esc-kpi"><div class="ek-label">Profit Factor</div><div class="ek-val" id="escPF">—</div><div class="ek-sub">Ganancias/Pérd.</div></div>
+          <div class="esc-kpi"><div class="ek-label">Max Drawdown</div><div class="ek-val" id="escDD">—%</div><div class="ek-sub">Del período</div></div>
+          <div class="esc-kpi"><div class="ek-label">RR Promedio</div><div class="ek-val" id="escRR">—</div><div class="ek-sub">Realizado</div></div>
+          <div class="esc-kpi"><div class="ek-label">Capital Score</div><div class="ek-val gold" id="escScore">—</div><div class="ek-sub" id="escScoreLabel">—</div></div>
+        </div>
+
+        <!-- Elegibilidad -->
+        <div class="card section">
+          <div class="card-header">
+            <div class="card-title">Estado de Elegibilidad</div>
+            <div id="eligibilityBadge" class="eligibility-badge insuf">⏳ Calculando...</div>
+          </div>
+          <div class="criteria-list" id="criteriaList"></div>
+        </div>
+
+        <!-- Curva de equity -->
+        <div class="card section">
+          <div class="card-header"><div class="card-title">Curva de Equity</div></div>
+          <div class="chart-wrapper"><canvas id="escEquityChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- TAB RIESGO -->
+      <div class="esc-tab-content" id="esc-riesgo">
+        <div class="grid-2" style="gap:20px;margin-bottom:20px">
+          <div>
+            <div class="section-title" style="margin-bottom:14px">Escalera de Riesgo</div>
+            <div class="risk-ladder" id="riskLadder"></div>
+          </div>
+          <div>
+            <div class="section-title" style="margin-bottom:14px">Reglas de Reducción</div>
+            <div class="card" style="padding:16px">
+              <div class="criteria-list" id="riskRules"></div>
+            </div>
+            <div class="card" style="padding:16px;margin-top:12px">
+              <div class="card-title" style="margin-bottom:12px">Exposición actual</div>
+              <div class="grid-2" style="gap:10px">
+                <div class="esc-kpi"><div class="ek-label">Riesgo recomendado</div><div class="ek-val gold" id="riskRecomendado">—%</div></div>
+                <div class="esc-kpi"><div class="ek-label">Riesgo máximo</div><div class="ek-val" id="riskMaximo">—%</div></div>
+                <div class="esc-kpi"><div class="ek-label">$ por trade (rec.)</div><div class="ek-val" id="riskUsdTrade">$—</div></div>
+                <div class="esc-kpi"><div class="ek-label">Buffer DD restante</div><div class="ek-val" id="riskBuffer">—%</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB HITOS -->
+      <div class="esc-tab-content" id="esc-hitos">
+        <div class="section-header" style="margin-bottom:16px">
+          <div class="section-title">Roadmap de Escalamiento</div>
+          <span class="badge badge-orange" id="hitosProgress">—</span>
+        </div>
+        <div class="milestones" id="milestonesList"></div>
+      </div>
+
+      <!-- TAB DISTRIBUCIÓN -->
+      <div class="esc-tab-content" id="esc-distribucion">
+        <div class="card" style="padding:20px;margin-bottom:20px">
+          <div class="card-header">
+            <div class="card-title">Profit disponible para distribuir</div>
+            <div class="ek-val gold" id="distProfitDisp">$—</div>
+          </div>
+          <div style="background:rgba(212,160,23,0.08);border:1px solid rgba(212,160,23,0.3);border-radius:var(--radius-md);padding:12px 14px;font-size:0.75rem;color:#d4a017;margin-bottom:16px">
+            ⚠️ Solo puedes distribuir profit realmente realizado y cobrado. Los retiros ya registrados en tu journal están descontados.
+          </div>
+          <div class="alloc-grid" id="allocGrid">
+            <div class="alloc-item">
+              <div class="ai-label">Retiro personal</div>
+              <div class="ai-pct" id="allocPct1">40%</div>
+              <div class="ai-usd" id="allocUsd1">$—</div>
+              <input type="range" class="alloc-slider" id="allocSlider1" min="0" max="100" value="40" oninput="updateAlloc()">
+            </div>
+            <div class="alloc-item">
+              <div class="ai-label">Reinversión en cuenta</div>
+              <div class="ai-pct" id="allocPct2">30%</div>
+              <div class="ai-usd" id="allocUsd2">$—</div>
+              <input type="range" class="alloc-slider" id="allocSlider2" min="0" max="100" value="30" oninput="updateAlloc()">
+            </div>
+            <div class="alloc-item">
+              <div class="ai-label">Reserva operativa</div>
+              <div class="ai-pct" id="allocPct3">20%</div>
+              <div class="ai-usd" id="allocUsd3">$—</div>
+              <input type="range" class="alloc-slider" id="allocSlider3" min="0" max="100" value="20" oninput="updateAlloc()">
+            </div>
+            <div class="alloc-item">
+              <div class="ai-label">Fondo evaluaciones</div>
+              <div class="ai-pct" id="allocPct4">10%</div>
+              <div class="ai-usd" id="allocUsd4">$—</div>
+              <input type="range" class="alloc-slider" id="allocSlider4" min="0" max="100" value="10" oninput="updateAlloc()">
+            </div>
+          </div>
+          <div id="allocWarning" style="display:none;margin-top:12px;background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-md);padding:10px 14px;font-size:0.75rem;color:var(--red)">
+            ⚠️ Los porcentajes suman más del 100%. Ajusta los sliders.
+          </div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:0.78rem">
+            <span style="color:var(--text-muted)">Total asignado</span>
+            <span style="font-family:var(--font-mono);font-weight:700" id="allocTotal">100%</span>
+          </div>
+        </div>
+
+        <!-- Historial de retiros de esta cuenta -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:16px;border-bottom:1px solid var(--border)">
+            <div class="card-title">Retiros registrados en esta cuenta</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Monto</th><th>Nota</th></tr></thead>
+              <tbody id="retirosHistorial"><tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-muted)">Sin retiros</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB FONDEO -->
+      <div class="esc-tab-content" id="esc-fondeo">
+        <div class="section-header" style="margin-bottom:16px">
+          <div class="section-title">Tiers de Fondeo Disponibles</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">Basado en tu profit real disponible</div>
+        </div>
+
+        <div class="grid-3" style="gap:12px;margin-bottom:24px" id="fundingTiersGrid"></div>
+
+        <div class="card section">
+          <div class="card-header"><div class="card-title">Configurar costos por tier</div></div>
+          <table style="width:100%;font-size:0.78rem">
+            <thead><tr><th style="padding:8px;text-align:left;color:var(--text-muted)">Tier</th><th style="padding:8px;text-align:left;color:var(--text-muted)">Costo ($)</th></tr></thead>
+            <tbody id="tierCostTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB SIMULACIÓN -->
+      <div class="esc-tab-content" id="esc-simulacion">
+        <div class="card section">
+          <div class="card-header">
+            <div class="card-title">Parámetros de Simulación</div>
+            <div style="font-size:0.65rem;color:var(--green);font-weight:600" id="simDataSource">📊 Usando datos reales del Journal</div>
+          </div>
+
+          <div class="sim-config">
+            <div class="input-group">
+              <label class="input-label">Meta de capital ($)</label>
+              <input type="number" class="input" id="simTarget" value="100000" min="1000" step="1000" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Tier inicial de fondeo</label>
+              <select class="input" id="simStartTier">
+                <option value="0">$5,000</option>
+                <option value="1">$10,000</option>
+                <option value="2" selected>$25,000</option>
+                <option value="3">$50,000</option>
+                <option value="4">$100,000</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Win Rate <span id="simWRlabel" style="color:#d4a017">(real: —%)</span></label>
+              <input type="number" class="input" id="simWR" value="55" min="10" max="90" step="1" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">R:R promedio <span id="simRRlabel" style="color:#d4a017">(real: —)</span></label>
+              <input type="number" class="input" id="simRR" value="1.5" min="0.5" max="5" step="0.1" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">% target por cuenta</label>
+              <input type="number" class="input" id="simTargetPct" value="10" min="5" max="20" step="0.5" />
+            </div>
+          </div>
+
+          <div class="input-group" style="margin-bottom:16px">
+            <label class="input-label">Perfil de riesgo</label>
+            <div class="profile-btns">
+              <button class="profile-btn" data-profile="lento" onclick="selectProfile(this)">🐢 Lento (0.75%)</button>
+              <button class="profile-btn active" data-profile="moderado" onclick="selectProfile(this)">⚖️ Moderado (1.5%)</button>
+              <button class="profile-btn" data-profile="agresivo" onclick="selectProfile(this)">🚀 Agresivo (2.5%)</button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="runSimulation()" id="simBtn">
+            🎲 Ejecutar Simulación Monte Carlo
+          </button>
+        </div>
+
+        <!-- Resultados simulación -->
+        <div id="simResults" style="display:none">
+          <div class="grid-3" style="gap:12px;margin-bottom:20px" id="simStatCards"></div>
+          <div class="card section">
+            <div class="card-header"><div class="card-title">Probabilidad por perfil</div></div>
+            <div class="chart-wrapper"><canvas id="simProbChart"></canvas></div>
+          </div>
+          <div class="card section">
+            <div class="card-header"><div class="card-title">Ruta de escalamiento más probable</div></div>
+            <div id="simRoadmap" style="padding:8px"></div>
+          </div>
+          <div style="background:var(--bg-card-2);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;font-size:0.72rem;color:var(--text-muted);margin-top:12px">
+            ⚠️ La simulación Monte Carlo es probabilística, no una garantía. Los resultados dependen de que mantengas el winrate y R:R indicados. Tu resultado real puede diferir significativamente.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBVxZcMxZNV7e79g-EbZwSmoHvyQ-XHH8A",
+    authDomain: "journal-del-rey.firebaseapp.com",
+    projectId: "journal-del-rey",
+    storageBucket: "journal-del-rey.firebasestorage.app",
+    messagingSenderId: "380863316017",
+    appId: "1:380863316017:web:a1dcdad1c5c2a9c1625510"
+  };
+
+  const fbApp = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(fbApp);
+  const db = getFirestore(fbApp);
+
+  let currentUser = null;
+  let allAccounts = [];
+  let selectedAccount = null;
+  let selectedTrades = [];
+  let selectedRetiros = [];
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (!userDoc.exists() || userDoc.data().active === false) {
+      await signOut(auth); window.location.href = 'index.html'; return;
+    }
+    currentUser = user;
+    const name = userDoc.data().displayName || 'Rey';
+    document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+    await loadAccounts();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appLayout').style.display = 'flex';
+  });
+
+  window.loadAccounts = async function() {
+    const grid = document.getElementById('accountSelectorGrid');
+    grid.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;padding:10px">Cargando...</div>';
+    try {
+      const q = query(collection(db, 'users', currentUser.uid, 'accounts'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      allAccounts = [];
+      for (const d of snap.docs) {
+        const acc = { id: d.id, ...d.data() };
+        const tSnap = await getDocs(collection(db, 'users', currentUser.uid, 'accounts', acc.id, 'trades'));
+        acc.trades = tSnap.docs.map(t => ({ id: t.id, ...t.data() }));
+        try {
+          const rSnap = await getDocs(collection(db, 'users', currentUser.uid, 'accounts', acc.id, 'retiros'));
+          acc.retiros = rSnap.docs.map(r => ({ id: r.id, ...r.data() }));
+        } catch(e) { acc.retiros = []; }
+        allAccounts.push(acc);
+      }
+      document.getElementById('escTotalAccounts').textContent = allAccounts.length;
+      renderAccountSelector();
+    } catch(e) {
+      grid.innerHTML = '<div style="color:var(--red);font-size:0.8rem;padding:10px">Error cargando cuentas.</div>';
+    }
+  };
+
+  function renderAccountSelector() {
+    const grid = document.getElementById('accountSelectorGrid');
+    if (!allAccounts.length) {
+      grid.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;padding:20px">No tienes cuentas creadas aún. <a href="nueva-cuenta.html" style="color:#d4a017">Crear cuenta →</a></div>';
+      return;
+    }
+    grid.innerHTML = allAccounts.map(acc => {
+      const size = parseFloat(acc.size) || 0;
+      const pnl = acc.trades.reduce((s,t) => s+(parseFloat(t.pnlUsd)||0), 0);
+      const retiros = acc.retiros.reduce((s,r) => s+(parseFloat(r.monto)||0), 0);
+      const equity = size + pnl - retiros;
+      const pnlPct = size > 0 ? pnl/size*100 : 0;
+      const isSelected = selectedAccount?.id === acc.id;
+      const color = pnlPct >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div class="acc-sel-card ${isSelected?'selected':''}" onclick="selectAccount('${acc.id}')">
+        <div class="acc-name">${acc.name||'Sin nombre'}</div>
+        <div class="acc-size">$${formatN(equity)}</div>
+        <div class="acc-meta">${acc.type==='fondeo'?'🏦 Fondeo':'💼 Capital Real'} · ${acc.strategy||'—'} · ${acc.trades.length} trades</div>
+        <div class="acc-pnl" style="color:${color}">${pnlPct>=0?'+':''}${pnlPct.toFixed(2)}% este período</div>
+      </div>`;
+    }).join('');
+  }
+
+  window.selectAccount = async function(id) {
+    selectedAccount = allAccounts.find(a => a.id === id);
+    if (!selectedAccount) return;
+    selectedTrades = selectedAccount.trades;
+    selectedRetiros = selectedAccount.retiros || [];
+    renderAccountSelector();
+    document.getElementById('noAccountState').style.display = 'none';
+    document.getElementById('escaladorContent').style.display = 'block';
+    renderAll();
+  };
+
+  function renderAll() {
+    renderResumen();
+    renderRiesgo();
+    renderHitos();
+    renderDistribucion();
+    renderFondeo();
+    prefillSimulation();
+  }
+
+  // ── MÉTRICAS CALCULADAS ───────────────────────────────────
+  function calcMetrics(trades, size, retiros) {
+    const wins = trades.filter(t=>t.result==='win');
+    const losses = trades.filter(t=>t.result==='loss');
+    const total = trades.length;
+    const pnlUsd = trades.reduce((s,t)=>s+(parseFloat(t.pnlUsd)||0),0);
+    const totalRetiros = retiros.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+    const equity = size + pnlUsd - totalRetiros;
+    const pnlPct = size > 0 ? pnlUsd/size*100 : 0;
+    const wr = total > 0 ? wins.length/total*100 : 0;
+    const grossGain = wins.reduce((s,t)=>s+Math.max(0,parseFloat(t.pnlUsd)||0),0);
+    const grossLoss = losses.reduce((s,t)=>s+Math.abs(parseFloat(t.pnlUsd)||0),0);
+    const pf = grossLoss > 0 ? grossGain/grossLoss : grossGain > 0 ? 99 : 0;
+    const avgGain = wins.length ? grossGain/wins.length : 0;
+    const avgLoss = losses.length ? grossLoss/losses.length : 0;
+    const exp = (wr/100*avgGain) - ((1-wr/100)*avgLoss);
+    const rrVals = trades.filter(t=>parseFloat(t.rr)>0).map(t=>parseFloat(t.rr));
+    const avgRR = rrVals.length ? rrVals.reduce((s,v)=>s+v,0)/rrVals.length : 0;
+
+    // Max DD
+    let peak=0, eq2=0, maxDD=0;
+    [...trades].sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0)).forEach(t=>{
+      eq2+=parseFloat(t.pnlUsd)||0;
+      if(eq2>peak)peak=eq2;
+      const dd=peak>0?(peak-eq2)/peak*100:0;
+      if(dd>maxDD)maxDD=dd;
+    });
+
+    // Capital Score
+    const wrScore = Math.min(100, wr*1.2);
+    const pfScore = Math.min(100, pf/3*100);
+    const ddScore = Math.max(0, 100-maxDD*5);
+    const sampleScore = Math.min(100, total*5);
+    const expScore = exp > 0 ? Math.min(100, exp/avgGain*100*0.5+50) : 20;
+    const capitalScore = Math.round(wrScore*0.25+pfScore*0.2+ddScore*0.2+sampleScore*0.15+expScore*0.2);
+
+    return { wins:wins.length, losses:losses.length, total, pnlUsd, pnlPct, equity, wr, pf, avgGain, avgLoss, exp, avgRR, maxDD, capitalScore, totalRetiros };
+  }
+
+  function renderResumen() {
+    const acc = selectedAccount;
+    const size = parseFloat(acc.size)||0;
+    const m = calcMetrics(selectedTrades, size, selectedRetiros);
+
+    const fmtUsd = v => (v>=0?'+':'')+' $'+Math.abs(v).toFixed(2);
+    const col = v => v>=0?'green':'red';
+
+    setVal('escEquity', '$'+formatN(m.equity), col(m.equity-size));
+    document.getElementById('escEquitySub').textContent = 'Base: $'+formatN(size)+' · Retiros: $'+formatN(m.totalRetiros);
+    setVal('escPnl', fmtUsd(m.pnlUsd), col(m.pnlUsd));
+    document.getElementById('escPnlPct').textContent = (m.pnlPct>=0?'+':'')+m.pnlPct.toFixed(2)+'%';
+    setVal('escWR', m.wr.toFixed(1)+'%');
+    document.getElementById('escWRsub').textContent = m.wins+'W / '+m.losses+'L / '+m.total+' trades';
+    setVal('escExp', (m.exp>=0?'+':'')+'$'+Math.abs(m.exp).toFixed(2), col(m.exp));
+    setVal('escPF', m.pf > 0 ? m.pf.toFixed(2) : '—');
+    setVal('escDD', m.maxDD.toFixed(2)+'%', m.maxDD>10?'red':m.maxDD>5?'':'green');
+    setVal('escRR', m.avgRR > 0 ? m.avgRR.toFixed(2)+'R' : '—');
+    setVal('escScore', m.capitalScore.toString(), m.capitalScore>=70?'green':m.capitalScore>=50?'gold':'red');
+
+    const scoreLabel = m.capitalScore>=85?'🟢 Élite':m.capitalScore>=70?'🟢 Sólido':m.capitalScore>=55?'🟡 Desarrollo':'🔴 Riesgo';
+    document.getElementById('escScoreLabel').textContent = scoreLabel;
+
+    // Elegibilidad
+    const criteria = [
+      { label:'Win Rate ≥ 50%', val:m.wr.toFixed(1)+'%', pass:m.wr>=50, warn:m.wr>=40 },
+      { label:'Expectancy positiva', val:'$'+m.exp.toFixed(2)+'/trade', pass:m.exp>0, warn:m.exp>-5 },
+      { label:'Muestra mínima (20 trades)', val:m.total+' trades', pass:m.total>=20, warn:m.total>=10 },
+      { label:'Profit Factor ≥ 1.2', val:m.pf.toFixed(2), pass:m.pf>=1.2, warn:m.pf>=1.0 },
+      { label:'Max Drawdown < 15%', val:m.maxDD.toFixed(2)+'%', pass:m.maxDD<15, warn:m.maxDD<20 },
+      { label:'Capital Score ≥ 60', val:m.capitalScore+'/100', pass:m.capitalScore>=60, warn:m.capitalScore>=45 },
+    ];
+
+    const passCount = criteria.filter(c=>c.pass).length;
+    const allPass = passCount === criteria.length;
+    const somePass = passCount >= 4;
+
+    const badge = document.getElementById('eligibilityBadge');
+    if (m.total < 5) {
+      badge.className = 'eligibility-badge insuf';
+      badge.textContent = '⏳ Datos insuficientes';
+    } else if (allPass) {
+      badge.className = 'eligibility-badge apto';
+      badge.textContent = '✅ APTO para escalar';
+    } else if (somePass) {
+      badge.className = 'eligibility-badge insuf';
+      badge.textContent = '⚠️ Condiciones parciales ('+passCount+'/'+criteria.length+')';
+    } else {
+      badge.className = 'eligibility-badge no-apto';
+      badge.textContent = '❌ NO APTO — trabajar métricas';
+    }
+
+    document.getElementById('criteriaList').innerHTML = criteria.map(c => {
+      const cls = c.pass?'pass':c.warn?'warn':'fail';
+      const icon = c.pass?'✅':c.warn?'⚠️':'❌';
+      return `<div class="criteria-item ${cls}"><span class="ci-icon">${icon}</span><span class="ci-label">${c.label}</span><span class="ci-val">${c.val}</span></div>`;
+    }).join('');
+
+    // Próxima acción
+    let nextText = '';
+    if (m.total < 10) {
+      nextText = `Necesitas más muestra estadística. Lleva ${20-m.total} trades más con disciplina antes de pensar en escalar.`;
+    } else if (!allPass && m.wr < 50) {
+      nextText = `Tu win rate es ${m.wr.toFixed(1)}%. Enfócate en mejorar la selección de setups antes de aumentar el riesgo.`;
+    } else if (m.exp <= 0) {
+      nextText = `Tu expectancy es negativa ($${m.exp.toFixed(2)}/trade). El sistema te está quitando dinero. Revisa tu RR y gestión de salidas.`;
+    } else if (allPass && m.capitalScore >= 70) {
+      nextText = `✅ Tus métricas son sólidas. Puedes evaluar subir el riesgo al siguiente nivel. Revisa la pestaña Riesgo para los detalles.`;
+    } else {
+      const pending = criteria.filter(c=>!c.pass).map(c=>c.label).join(', ');
+      nextText = `Faltan condiciones: ${pending}. Mantén el plan actual hasta cumplirlas.`;
+    }
+    document.getElementById('nextActionText').textContent = nextText;
+
+    // Equity chart
+    renderEquityChart(selectedTrades, size);
+  }
+
+  function renderEquityChart(trades, size) {
+    const sorted = [...trades].sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0));
+    let equity = size;
+    const points = [{ x:'Inicio', y:size }];
+    sorted.forEach((t,i) => {
+      equity += parseFloat(t.pnlUsd)||0;
+      points.push({ x: t.date||('T'+(i+1)), y: parseFloat(equity.toFixed(2)) });
+    });
+    const existing = Chart.getChart('escEquityChart');
+    if (existing) existing.destroy();
+    const isDark = document.documentElement.getAttribute('data-theme')!=='light';
+    const gridColor = isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)';
+    const textColor = isDark?'#555':'#aaa';
+    new Chart(document.getElementById('escEquityChart'), {
+      type:'line',
+      data:{
+        labels: points.map(p=>p.x),
+        datasets:[{
+          label:'Equity',
+          data: points.map(p=>p.y),
+          borderColor:'#d4a017',
+          backgroundColor:'rgba(212,160,23,0.08)',
+          fill:true, tension:0.4,
+          pointRadius: points.length<30?4:0,
+          pointBackgroundColor:'#d4a017',
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:gridColor},ticks:{color:textColor}},
+          y:{grid:{color:gridColor},ticks:{color:textColor}}
+        }
+      }
+    });
+  }
+
+  function renderRiesgo() {
+    const m = calcMetrics(selectedTrades, parseFloat(selectedAccount.size)||0, selectedRetiros);
+    const LEVELS = [
+      { pct:0.25, label:'Protección', desc:'Para cuentas en recuperación o con datos insuficientes.' },
+      { pct:0.50, label:'Base', desc:'Nivel de inicio. Muestra estadística en construcción.' },
+      { pct:0.75, label:'Normal', desc:'WR ≥ 50%, expectancy positiva, muestra ≥ 20 trades.' },
+      { pct:1.00, label:'Escalado', desc:'PF ≥ 1.5, Capital Score ≥ 70, DD < 10%.' },
+      { pct:1.25, label:'Aceleración', desc:'Élite: Score ≥ 85, WR ≥ 60%, PF ≥ 2.0.' },
+    ];
+
+    let currentLevel = 0;
+    if (m.total >= 5 && m.wr >= 40 && m.exp > -5) currentLevel = 1;
+    if (m.total >= 20 && m.wr >= 50 && m.exp > 0) currentLevel = 2;
+    if (m.pf >= 1.5 && m.capitalScore >= 70 && m.maxDD < 10) currentLevel = 3;
+    if (m.capitalScore >= 85 && m.wr >= 60 && m.pf >= 2.0) currentLevel = 4;
+
+    const recPct = LEVELS[currentLevel].pct;
+    const maxPct = currentLevel < LEVELS.length-1 ? LEVELS[currentLevel+1].pct : LEVELS[currentLevel].pct;
+    const size = parseFloat(selectedAccount.size)||0;
+
+    document.getElementById('riskRecomendado').textContent = recPct+'%';
+    document.getElementById('riskMaximo').textContent = maxPct+'%';
+    document.getElementById('riskUsdTrade').textContent = '$'+((size*recPct/100).toFixed(2));
+    const ddBuffer = Math.max(0, (selectedAccount.maxDDLimit||10) - m.maxDD);
+    document.getElementById('riskBuffer').textContent = ddBuffer.toFixed(2)+'%';
+
+    document.getElementById('riskLadder').innerHTML = LEVELS.map((l,i) => {
+      const isCurrent = i === currentLevel;
+      const isUnlocked = i < currentLevel;
+      const isLocked = i > currentLevel;
+      const cls = isCurrent?'current':isUnlocked?'unlocked':isLocked?'locked':'';
+      const badge = isCurrent?'<span class="risk-badge" style="background:#d4a017;color:#000">ACTUAL</span>':
+                    isUnlocked?'<span class="risk-badge" style="background:var(--green-dim);color:var(--green)">DESBLOQUEADO</span>':
+                    '<span class="risk-badge" style="background:var(--border);color:var(--text-muted)">BLOQUEADO</span>';
+      return `<div class="risk-level ${cls}">
+        <div class="risk-pct">${l.pct}%</div>
+        <div class="risk-desc"><strong>${l.label}</strong><br>${l.desc}</div>
+        ${badge}
+      </div>`;
+    }).join('');
+
+    // Reglas de reducción
+    const rules = [
+      { label:'Pérdida diaria > 3%', trigger:false, desc:'Pausar operaciones hoy' },
+      { label:'Drawdown actual > 10%', trigger:m.maxDD>10, desc:'Reducir riesgo al nivel anterior' },
+      { label:'Racha de 3+ pérdidas', trigger:false, desc:'Revisar setups y condiciones' },
+      { label:'Expectancy negativa', trigger:m.exp<0, desc:'No aumentar riesgo hasta corregir' },
+      { label:'Muestra insuficiente (<10)', trigger:m.total<10, desc:'Mantener riesgo mínimo' },
+    ];
+    document.getElementById('riskRules').innerHTML = rules.map(r => `
+      <div class="criteria-item ${r.trigger?'fail':'pass'}">
+        <span class="ci-icon">${r.trigger?'⚠️':'✅'}</span>
+        <span class="ci-label">${r.label}</span>
+        <span class="ci-val" style="font-size:0.65rem;color:${r.trigger?'var(--red)':'var(--text-muted)'}">${r.trigger?r.desc:'OK'}</span>
+      </div>`).join('');
+  }
+
+  function renderHitos() {
+    const m = calcMetrics(selectedTrades, parseFloat(selectedAccount.size)||0, selectedRetiros);
+    const size = parseFloat(selectedAccount.size)||0;
+    const goal = parseFloat(selectedAccount.goalPct)||100;
+    const goalUsd = size * (goal/100);
+
+    const milestones = [
+      { title:'Fase 1 — Muestra estadística', desc:'Registra 20 trades con disciplina para tener datos confiables.', meta:`${m.total}/20 trades`, reached:m.total>=20, current:m.total<20 },
+      { title:'Fase 2 — Win Rate consistente', desc:'Mantén un win rate ≥ 50% por al menos 20 trades.', meta:m.wr.toFixed(1)+'% WR', reached:m.wr>=50&&m.total>=20, current:m.total>=20&&m.wr<50 },
+      { title:'Fase 3 — Expectancy positiva', desc:'Que cada trade valga la pena matemáticamente.', meta:'$'+m.exp.toFixed(2)+'/trade', reached:m.exp>0&&m.total>=20, current:m.total>=20&&m.exp<=0 },
+      { title:'Fase 4 — Capital Score 70+', desc:'Consistencia, disciplina y control de riesgo combinados.', meta:m.capitalScore+'/100', reached:m.capitalScore>=70, current:m.capitalScore<70&&m.capitalScore>=50 },
+      { title:'Fase 5 — Equity +25%', desc:'Primer hito de crecimiento real sobre la cuenta.', meta:'$'+formatN(m.pnlUsd)+' / $'+formatN(size*0.25), reached:m.pnlUsd>=size*0.25, current:m.pnlUsd<size*0.25&&m.pnlUsd>0 },
+      { title:'Meta final — '+goal+'% de crecimiento', desc:'Tu objetivo declarado al crear la cuenta.', meta:'$'+formatN(m.pnlUsd)+' / $'+formatN(goalUsd), reached:m.pnlUsd>=goalUsd, current:m.pnlUsd<goalUsd&&m.capitalScore>=60 },
+    ];
+
+    const reached = milestones.filter(m=>m.reached).length;
+    document.getElementById('hitosProgress').textContent = reached+'/'+milestones.length+' completados';
+
+    document.getElementById('milestonesList').innerHTML = milestones.map((ms,i) => `
+      <div class="milestone ${ms.reached?'reached':ms.current?'current':''}">
+        <div class="milestone-num">${ms.reached?'✓':(i+1)}</div>
+        <div class="milestone-body">
+          <div class="milestone-title">${ms.title}</div>
+          <div class="milestone-desc">${ms.desc}</div>
+          <div class="milestone-meta">${ms.meta}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderDistribucion() {
+    const m = calcMetrics(selectedTrades, parseFloat(selectedAccount.size)||0, selectedRetiros);
+    const profitDisp = Math.max(0, m.pnlUsd - m.totalRetiros);
+    document.getElementById('distProfitDisp').textContent = '$'+formatN(profitDisp);
+    window._distProfit = profitDisp;
+    updateAlloc();
+
+    // Historial retiros
+    const tbody = document.getElementById('retirosHistorial');
+    if (!selectedRetiros.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-muted)">Sin retiros registrados</td></tr>';
+    } else {
+      const sorted = [...selectedRetiros].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      tbody.innerHTML = sorted.map(r => `<tr>
+        <td style="font-family:var(--font-mono);color:var(--text-muted)">${r.date||'—'}</td>
+        <td style="font-family:var(--font-mono);color:#d4a017;font-weight:700">-$${parseFloat(r.monto||0).toFixed(2)}</td>
+        <td style="color:var(--text-muted);font-size:0.75rem">${r.nota||'—'}</td>
+      </tr>`).join('');
+    }
+  }
+
+  window.updateAlloc = function() {
+    const profit = window._distProfit || 0;
+    const s1=parseInt(document.getElementById('allocSlider1').value);
+    const s2=parseInt(document.getElementById('allocSlider2').value);
+    const s3=parseInt(document.getElementById('allocSlider3').value);
+    const s4=parseInt(document.getElementById('allocSlider4').value);
+    const total = s1+s2+s3+s4;
+    [1,2,3,4].forEach(i=>{
+      const pct = eval('s'+i);
+      document.getElementById('allocPct'+i).textContent=pct+'%';
+      document.getElementById('allocUsd'+i).textContent='$'+(profit*pct/100).toFixed(2);
+    });
+    document.getElementById('allocTotal').textContent=total+'%';
+    document.getElementById('allocTotal').style.color=total>100?'var(--red)':total===100?'var(--green)':'var(--text-primary)';
+    document.getElementById('allocWarning').style.display=total>100?'block':'none';
+  };
+
+  // Tiers base y custom persistentes
+  if (!window._customTiers) window._customTiers = [];
+
+  function getBaseTierCosts() {
+    return [
+      parseInt(document.getElementById('tierCost0')?.value||59),
+      parseInt(document.getElementById('tierCost1')?.value||99),
+      parseInt(document.getElementById('tierCost2')?.value||199),
+      parseInt(document.getElementById('tierCost3')?.value||349),
+      parseInt(document.getElementById('tierCost4')?.value||549),
+      parseInt(document.getElementById('tierCost5')?.value||999),
+    ];
+  }
+
+  function renderFondeo() {
+    const costs = getBaseTierCosts();
+    const BASE_TIERS = [
+      {label:'$5,000',size:5000,cost:costs[0]},
+      {label:'$10,000',size:10000,cost:costs[1]},
+      {label:'$25,000',size:25000,cost:costs[2]},
+      {label:'$50,000',size:50000,cost:costs[3]},
+      {label:'$100,000',size:100000,cost:costs[4]},
+      {label:'$200,000',size:200000,cost:costs[5]},
+    ];
+    // Incluir tiers personalizados
+    const ALL_TIERS = [...BASE_TIERS, ...window._customTiers];
+
+    const m = calcMetrics(selectedTrades, parseFloat(selectedAccount.size)||0, selectedRetiros);
+    const profit = Math.max(0, m.pnlUsd - m.totalRetiros);
+
+    function tierCard(t, isCustom, idx) {
+      const canAfford = profit >= t.cost;
+      const simP = estimatePassProb(m.wr/100, m.avgRR||1.5, 1, 4, 8, 10);
+      const color = simP>=0.6?'var(--green)':simP>=0.35?'#d4a017':'var(--red)';
+      const deletBtn = isCustom ? '<button onclick="deleteCustomTier('+idx+')" style="margin-top:8px;background:var(--red-dim);color:var(--red);border:none;border-radius:4px;padding:3px 8px;font-size:0.65rem;cursor:pointer">✕ Eliminar</button>' : '';
+      return '<div class="tier-card" style="'+(canAfford?'border-color:rgba(212,160,23,0.4)':'')+'">' +
+        '<div class="tc-size">'+t.label+(isCustom?' <span style="font-size:0.55rem;color:#d4a017;vertical-align:middle">PERSONALIZADO</span>':'')+'</div>' +
+        '<div class="tc-cost">Costo: $'+t.cost+' · '+(canAfford?'<span style="color:var(--green)">✅ Puedes comprarlo</span>':'<span style="color:var(--text-muted)">Necesitas $'+(t.cost-profit).toFixed(0)+' más</span>')+'</div>' +
+        '<div class="tc-prob" style="color:'+color+'">'+Math.round(simP*100)+'% prob. aprobación</div>' +
+        '<div style="font-size:0.65rem;color:var(--text-muted);margin-top:4px">Con tu WR '+m.wr.toFixed(0)+'% y RR '+(m.avgRR||1.5).toFixed(1)+'</div>' +
+        deletBtn +
+      '</div>';
+    }
+
+    const grid = document.getElementById('fundingTiersGrid');
+    grid.innerHTML =
+      BASE_TIERS.map((t,i) => tierCard(t, false, i)).join('') +
+      window._customTiers.map((t,i) => tierCard(t, true, i)).join('') +
+      '<div class="tier-card" style="border:2px dashed var(--border);background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:100px" onclick="openCustomTierModal()">' +
+        '<div style="font-size:1.4rem">➕</div>' +
+        '<div style="font-size:0.75rem;font-weight:700;color:var(--text-muted)">Agregar capital</div>' +
+        '<div style="font-size:0.65rem;color:var(--text-muted)">Tier personalizado</div>' +
+      '</div>';
+
+    // Tabla de costos editables — con botón Actualizar
+    document.getElementById('tierCostTable').innerHTML = BASE_TIERS.map((t,i) => '<tr>' +
+      '<td style="padding:8px;color:var(--text-primary);font-weight:600">'+t.label+'</td>' +
+      '<td style="padding:8px"><input type="number" class="input" id="tierCost'+i+'" value="'+costs[i]+'" min="1" step="1" style="max-width:100px;padding:6px 10px;font-size:0.8rem" /></td>' +
+    '</tr>').join('') +
+    '<tr><td colspan="2" style="padding:10px 8px"><button class="btn btn-ghost btn-sm" onclick="refreshFondeo()">↻ Actualizar precios</button></td></tr>';
+  }
+
+  window.refreshFondeo = function() {
+    renderFondeo();
+    showToast('✅ Precios actualizados.', 'success');
+  };
+
+  window.deleteCustomTier = function(idx) {
+    if (!confirm('¿Eliminar este tier personalizado?')) return;
+    window._customTiers.splice(idx, 1);
+    renderFondeo();
+  };
+
+  // ── Modal tier personalizado ──────────────────────────────
+  window.openCustomTierModal = function() {
+    document.getElementById('customTierModal').classList.add('open');
+    document.getElementById('ctLabel').value = '';
+    document.getElementById('ctSize').value = '';
+    document.getElementById('ctCost').value = '';
+  };
+
+  window.closeCustomTierModal = function() {
+    document.getElementById('customTierModal').classList.remove('open');
+  };
+
+  window.saveCustomTier = function() {
+    const label = document.getElementById('ctLabel').value.trim();
+    const size = parseFloat(document.getElementById('ctSize').value);
+    const cost = parseFloat(document.getElementById('ctCost').value);
+
+    if (!label) { showToast('Escribe un nombre para el tier.', 'error'); return; }
+    if (!size || size <= 0) { showToast('Ingresa el capital total a recibir.', 'error'); return; }
+    if (!cost || cost <= 0) { showToast('Ingresa el costo total (incluyendo activación).', 'error'); return; }
+
+    window._customTiers.push({ label, size, cost });
+    closeCustomTierModal();
+    renderFondeo();
+    showToast('✅ Tier "'+label+'" agregado.', 'success');
+  };
+
+  function estimatePassProb(wr, rr, riskPct, ddD, ddT, target, N=400) {
+    let passes=0;
+    for(let i=0;i<N;i++){
+      let cum=0;
+      let passed=false, failed=false;
+      for(let day=0;day<90&&!passed&&!failed;day++){
+        let daily=0;
+        const trades=1+Math.floor(Math.random()*3);
+        for(let t=0;t<trades;t++){
+          const w=Math.random()<wr;
+          const ch=w?riskPct*rr:-riskPct;
+          cum+=ch; daily+=ch;
+          if(daily<=-ddD){failed=true;break;}
+          if(cum<=-ddT){failed=true;break;}
+          if(cum>=target){passed=true;break;}
+        }
+      }
+      if(passed)passes++;
+    }
+    return passes/N;
+  }
+
+  function prefillSimulation() {
+    const m = calcMetrics(selectedTrades, parseFloat(selectedAccount.size)||0, selectedRetiros);
+    if (m.total >= 10) {
+      document.getElementById('simWR').value = Math.round(m.wr);
+      document.getElementById('simRR').value = m.avgRR > 0 ? m.avgRR.toFixed(1) : 1.5;
+      document.getElementById('simWRlabel').textContent = '(real: '+m.wr.toFixed(1)+'%)';
+      document.getElementById('simRRlabel').textContent = '(real: '+(m.avgRR||1.5).toFixed(2)+'R)';
+      document.getElementById('simDataSource').textContent = '📊 Usando datos reales del Journal ('+m.total+' trades)';
+    } else {
+      document.getElementById('simDataSource').textContent = '⚠️ Datos estimados — menos de 10 trades reales';
+      document.getElementById('simDataSource').style.color = '#d4a017';
+    }
+  }
+
+  window.runSimulation = function() {
+    const btn = document.getElementById('simBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader"></div> Simulando...';
+
+    setTimeout(() => {
+      const targetCapital = parseFloat(document.getElementById('simTarget').value);
+      const startTierIdx = parseInt(document.getElementById('simStartTier').value);
+      const wr = parseFloat(document.getElementById('simWR').value)/100;
+      const rr = parseFloat(document.getElementById('simRR').value);
+      const targetPct = parseFloat(document.getElementById('simTargetPct').value);
+      const TIERS = [
+        {label:'$5K',size:5000,cost:parseInt(document.getElementById('tierCost0')?.value||59)},
+        {label:'$10K',size:10000,cost:parseInt(document.getElementById('tierCost1')?.value||99)},
+        {label:'$25K',size:25000,cost:parseInt(document.getElementById('tierCost2')?.value||199)},
+        {label:'$50K',size:50000,cost:parseInt(document.getElementById('tierCost3')?.value||349)},
+        {label:'$100K',size:100000,cost:parseInt(document.getElementById('tierCost4')?.value||549)},
+        {label:'$200K',size:200000,cost:parseInt(document.getElementById('tierCost5')?.value||999)},
+      ];
+      const PROFILES = {
+        lento:{label:'Lento',risk:0.75,ddDaily:3,ddTotal:6},
+        moderado:{label:'Moderado',risk:1.5,ddDaily:4,ddTotal:8},
+        agresivo:{label:'Agresivo',risk:2.5,ddDaily:6,ddTotal:12},
+      };
+
+      const results = {};
+      Object.keys(PROFILES).forEach(key => {
+        const prof = PROFILES[key];
+        let passes=0, totalDays=0;
+        for(let i=0;i<600;i++){
+          const r = simOne(wr, rr, prof.risk, prof.ddDaily, prof.ddTotal, targetPct);
+          if(r.passed){passes++;totalDays+=r.days;}
+        }
+        const pBase = passes/600;
+        let successes=0, ruins=0, totalRounds=0;
+        for(let s=0;s<800;s++){
+          let tierIdx=startTierIdx, numAcc=1, pool=0, ruined=false;
+          for(let round=0;round<30;round++){
+            let passed=0;
+            for(let a=0;a<numAcc;a++) if(Math.random()<pBase) passed++;
+            if(!passed){ruined=true;break;}
+            const profit=passed*TIERS[tierIdx].size*(targetPct/100);
+            pool+=profit;
+            if(passed*TIERS[tierIdx].size>=targetCapital){successes++;totalRounds+=(round+1);break;}
+            if(tierIdx<TIERS.length-1){
+              const nc=TIERS[tierIdx+1].cost;
+              const can=Math.floor(pool/nc);
+              if(can>=1){numAcc=Math.min(can,6);pool-=numAcc*nc;tierIdx++;}
+              else{numAcc=passed;}
+            }
+          }
+          if(ruined)ruins++;
+        }
+        results[key]={successRate:successes/800,ruinRate:ruins/800,avgRounds:successes>0?totalRounds/successes:null,pBase,avgDays:passes>0?totalDays/passes:null};
+      });
+
+      // Render resultados
+      document.getElementById('simResults').style.display='block';
+      const bestKey=Object.keys(results).reduce((a,b)=>results[a].successRate>=results[b].successRate?a:b);
+      document.getElementById('simStatCards').innerHTML=Object.keys(PROFILES).map(key=>{
+        const r=results[key]; const isBest=key===bestKey;
+        const col=r.successRate>0.5?'var(--green)':r.successRate>0.25?'#d4a017':'var(--red)';
+        return `<div class="esc-kpi" style="${isBest?'border-color:#d4a017;background:rgba(212,160,23,0.06)':''}">
+          <div class="ek-label">${PROFILES[key].label} ${isBest?'⭐':''}</div>
+          <div class="ek-val" style="color:${col}">${Math.round(r.successRate*100)}%</div>
+          <div class="ek-sub">prob. de llegar a $${(targetCapital/1000).toFixed(0)}K</div>
+          <div class="ek-sub" style="color:var(--red)">Ruina: ${Math.round(r.ruinRate*100)}%</div>
+          ${r.avgRounds?'<div class="ek-sub">~'+Math.round(r.avgRounds)+' rondas</div>':''}
+        </div>`;
+      }).join('');
+
+      const existing=Chart.getChart('simProbChart');if(existing)existing.destroy();
+      const isDark=document.documentElement.getAttribute('data-theme')!=='light';
+      const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)';
+      const tc=isDark?'#666':'#aaa';
+      new Chart(document.getElementById('simProbChart'),{
+        type:'bar',
+        data:{
+          labels:Object.keys(PROFILES).map(k=>PROFILES[k].label),
+          datasets:[
+            {label:'Prob. éxito',data:Object.keys(PROFILES).map(k=>Math.round(results[k].successRate*100)),backgroundColor:'#d4a017',borderRadius:6},
+            {label:'Prob. ruina',data:Object.keys(PROFILES).map(k=>Math.round(results[k].ruinRate*100)),backgroundColor:'rgba(239,68,68,0.5)',borderRadius:6},
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:tc,font:{size:11}}}},scales:{x:{grid:{color:gc},ticks:{color:tc}},y:{grid:{color:gc},ticks:{color:tc},max:100}}}
+      });
+
+      // Roadmap
+      document.getElementById('simRoadmap').innerHTML=TIERS.map((t,i)=>{
+        if(i<startTierIdx) return '';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:var(--font-mono);font-weight:700;color:#d4a017;min-width:70px">${t.label}</span>
+          <span style="font-size:0.72rem;color:var(--text-muted)">Fee: $${t.cost} · Target: $${(t.size*(targetPct/100)).toFixed(0)} · Profit neto: $${(t.size*(targetPct/100)-t.cost).toFixed(0)}</span>
+        </div>`;
+      }).join('');
+
+      btn.disabled=false;
+      btn.innerHTML='🎲 Ejecutar Simulación Monte Carlo';
+    }, 100);
+  };
+
+  function simOne(wr, rr, risk, ddD, ddT, target) {
+    let cum=0;
+    for(let day=0;day<90;day++){
+      let daily=0;
+      const trades=1+Math.floor(Math.random()*3);
+      for(let t=0;t<trades;t++){
+        const ch=Math.random()<wr?risk*rr:-risk;
+        cum+=ch;daily+=ch;
+        if(daily<=-ddD)return{passed:false,days:day+1};
+        if(cum<=-ddT)return{passed:false,days:day+1};
+        if(cum>=target)return{passed:true,days:day+1};
+      }
+    }
+    return{passed:false,days:90};
+  }
+
+  window.handleLogout = async()=>{ await signOut(auth); window.location.href='index.html'; };
+
+  // Helpers
+  function setVal(id, val, cls='') {
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.textContent=val;
+    el.className='ek-val'+(cls?' '+cls:'');
+  }
+  function formatN(n){ return parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  window.formatN=formatN;
+</script>
+
+<script>
+  const savedTheme = localStorage.getItem('tpl-theme')||'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  if(savedTheme==='light') document.querySelectorAll('.logo-dark-mode').forEach(l=>l.style.filter='invert(1)');
+  document.getElementById('themeToggle').addEventListener('click',()=>{
+    const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('tpl-theme',next);
+    document.querySelectorAll('.logo-dark-mode').forEach(l=>l.style.filter=next==='light'?'invert(1)':'');
+  });
+
+  window.toggleSidebar=()=>{document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');};
+  window.closeSidebar=()=>{document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('open');};
+
+  window.showEscTab=function(tab){
+    document.querySelectorAll('.esc-tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.esc-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('esc-'+tab)?.classList.add('active');
+    const tabs=['resumen','riesgo','hitos','distribucion','fondeo','simulacion'];
+    const idx=tabs.indexOf(tab);
+    document.querySelectorAll('.esc-tab')[idx]?.classList.add('active');
+  };
+
+  window.selectProfile=function(btn){
+    document.querySelectorAll('.profile-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+
+  window.showToast=function(msg,type='info'){
+    const c=document.getElementById('toastContainer');
+    const t=document.createElement('div');
+    t.className='toast '+type; t.textContent=msg;
+    c.appendChild(t); setTimeout(()=>t.remove(),3500);
+  };
+</script>
+
+<!-- MODAL TIER PERSONALIZADO -->
+<div class="modal-overlay" id="customTierModal" onclick="if(event.target===this)closeCustomTierModal()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#d4a017;margin-bottom:4px">Fondeo personalizado</div>
+        <h2 style="font-size:1rem">Agregar Capital de Fondeo</h2>
+      </div>
+      <button class="modal-close" onclick="closeCustomTierModal()">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:rgba(212,160,23,0.08);border:1px solid rgba(212,160,23,0.3);border-radius:var(--radius-md);padding:12px 14px;font-size:0.75rem;color:#d4a017">
+        💡 Si el fondeo tiene un costo base + activación, suma ambos en el <strong>Costo total</strong>.<br>
+        Ej: $10 challenge + $90 activación = $100 costo total.
+      </div>
+      <div class="input-group">
+        <label class="input-label">Nombre / Descripción</label>
+        <input type="text" class="input" id="ctLabel" placeholder="Ej: FTMO $15,000 · The5ers Elite..." />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Capital total a recibir (USD)</label>
+        <input type="number" class="input" id="ctSize" placeholder="Ej: 15000" min="100" step="100" />
+        <span style="font-size:0.68rem;color:var(--text-muted);margin-top:4px">El monto de la cuenta fondeada cuando apruebes el challenge.</span>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Costo total incluyendo activación (USD)</label>
+        <input type="number" class="input" id="ctCost" placeholder="Ej: 100" min="1" step="1" />
+        <span style="font-size:0.68rem;color:var(--text-muted);margin-top:4px">Si hay activación, súmala aquí. Ej: $10 + $90 = $100.</span>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
+        <button class="btn btn-ghost" onclick="closeCustomTierModal()">Cancelar</button>
+        <button class="btn" style="background:#d4a017;color:#000;font-weight:700" onclick="saveCustomTier()">
+          ➕ Agregar tier
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
