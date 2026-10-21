@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Racha TPL — Journal del Rey</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="assets/logo-blanco.png" />
+  <style>
+    /* ── Racha UI ─────────────────────────────────────────── */
+    .racha-hero {
+      background: linear-gradient(135deg, #0a0500 0%, #0d0800 50%, #050505 100%);
+      border: 1px solid rgba(255,103,38,0.2);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .racha-hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,103,38,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .racha-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 99px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .racha-badge.activa { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); box-shadow: 0 0 10px rgba(0,255,136,0.15); }
+    .racha-badge.rota { background: rgba(255,51,85,0.1); color: #ff3355; border: 1px solid rgba(255,51,85,0.3); }
+    .racha-badge.sin-racha { background: rgba(255,103,38,0.1); color: #FF6726; border: 1px solid rgba(255,103,38,0.3); }
+
+    .nivel-display {
+      font-size: 1.8rem; font-weight: 700; color: var(--text-primary);
+      text-shadow: 0 0 20px rgba(255,103,38,0.3);
+      margin: 8px 0 4px;
+    }
+    .nivel-subtitle { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* Progress bar racha */
+    .racha-progress-wrap { margin-top: 16px; }
+    .racha-progress-label { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 6px; }
+    .racha-progress-bar { height: 8px; background: #1a1a1a; border-radius: 99px; overflow: hidden; position: relative; }
+    .racha-progress-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, #FF6726, #ff9a5c);
+      box-shadow: 0 0 10px rgba(255,103,38,0.6), 0 0 20px rgba(255,103,38,0.3);
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    .racha-progress-fill.rota {
+      background: linear-gradient(90deg, #ff3355, #ff6b6b);
+      box-shadow: 0 0 10px rgba(255,51,85,0.5);
+    }
+
+    /* KPI racha */
+    .racha-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 10px; margin-bottom: 20px; }
+    .racha-kpi {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px;
+      transition: all var(--transition);
+    }
+    .racha-kpi:hover { border-color: rgba(255,103,38,0.3); }
+    .racha-kpi .rk-label { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+    .racha-kpi .rk-val { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; line-height: 1; }
+    .racha-kpi .rk-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 3px; }
+
+    /* Tabs */
+    .racha-tabs { display:flex; gap:2px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:3px; margin-bottom:20px; overflow-x:auto; }
+    .racha-tab { padding:8px 14px; border-radius:var(--radius-sm); font-size:0.76rem; font-weight:700; cursor:pointer; border:none; background:transparent; color:var(--text-muted); transition:all var(--transition); font-family:var(--font-main); white-space:nowrap; }
+    .racha-tab.active { background:#FF6726; color:#fff; box-shadow:0 0 12px rgba(255,103,38,0.4); }
+    .racha-tab:hover:not(.active) { color:#FF6726; background:rgba(255,103,38,0.05); }
+    .racha-tab-content { display:none; }
+    .racha-tab-content.active { display:block; }
+
+    /* Evaluaciones */
+    .eval-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .eval-dot.valido { background:#00ff88; box-shadow:0 0 6px rgba(0,255,136,0.7); }
+    .eval-dot.invalido { background:#ff3355; box-shadow:0 0 6px rgba(255,51,85,0.7); }
+    .eval-dot.pendiente { background:#ffe100; box-shadow:0 0 6px rgba(255,225,0,0.5); }
+
+    /* Niveles escalera */
+    .nivel-card {
+      display:flex; align-items:center; gap:14px;
+      padding:14px 16px; border-radius:var(--radius-md);
+      border:1px solid var(--border); background:var(--bg-base);
+      margin-bottom:6px; transition:all var(--transition);
+    }
+    .nivel-card.actual { border-color:#FF6726; background:rgba(255,103,38,0.06); box-shadow:0 0 16px rgba(255,103,38,0.1); }
+    .nivel-card.desbloqueado { border-color:rgba(0,255,136,0.3); background:rgba(0,255,136,0.04); }
+    .nivel-card.bloqueado { opacity:0.45; }
+    .nivel-num { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:700; flex-shrink:0; background:var(--border); color:var(--text-muted); }
+    .nivel-card.actual .nivel-num { background:#FF6726; color:#fff; box-shadow:0 0 10px rgba(255,103,38,0.5); }
+    .nivel-card.desbloqueado .nivel-num { background:#00ff88; color:#000; }
+    .nivel-info { flex:1; }
+    .nivel-nombre { font-size:0.88rem; font-weight:700; color:var(--text-primary); }
+    .nivel-rango { font-size:0.65rem; color:var(--text-muted); margin-top:2px; }
+    .nivel-enfoque { font-size:0.62rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }
+    .nivel-card.actual .nivel-enfoque { color:#FF6726; }
+    .nivel-card.desbloqueado .nivel-enfoque { color:#00ff88; }
+
+    /* Plan — wizard */
+    .wizard-steps { display:flex; gap:0; margin-bottom:28px; }
+    .wstep { flex:1; display:flex; align-items:center; gap:8px; }
+    .wstep-num { width:26px; height:26px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:var(--text-muted); flex-shrink:0; transition:all var(--transition); }
+    .wstep.active .wstep-num { border-color:#FF6726; background:#FF6726; color:#fff; box-shadow:0 0 8px rgba(255,103,38,0.5); }
+    .wstep.done .wstep-num { border-color:#00ff88; background:#00ff88; color:#000; }
+    .wstep-label { font-size:0.68rem; font-weight:600; color:var(--text-muted); white-space:nowrap; }
+    .wstep.active .wstep-label { color:var(--text-primary); }
+    .wstep-line { flex:1; height:1px; background:var(--border); margin:0 6px; }
+    .wstep-line.done { background:#00ff88; }
+
+    .wizard-form { display:none; flex-direction:column; gap:16px; }
+    .wizard-form.active { display:flex; }
+
+    .form-section-title {
+      font-size:0.6rem; font-weight:700; letter-spacing:0.12em;
+      text-transform:uppercase; color:#FF6726;
+      padding-bottom:8px; border-bottom:1px solid var(--border);
+    }
+
+    /* Regla configurador */
+    .rule-item {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 14px; border-radius:var(--radius-md);
+      background:var(--bg-base); border:1px solid var(--border);
+      flex-wrap:wrap;
+    }
+    .rule-item .ri-label { flex:1; min-width:160px; font-size:0.78rem; color:var(--text-secondary); font-weight:500; }
+    .rule-item .ri-input { width:90px; }
+    .rule-item .ri-unit { font-size:0.7rem; color:var(--text-muted); min-width:30px; }
+    .rule-item .ri-critical { display:flex; align-items:center; gap:5px; font-size:0.68rem; color:var(--text-muted); cursor:pointer; }
+    .rule-item .ri-critical input { accent-color:#FF6726; }
+
+    /* Modal aviso plan */
+    .aviso-plan {
+      background:linear-gradient(135deg,rgba(255,103,38,0.08),rgba(255,103,38,0.03));
+      border:1px solid rgba(255,103,38,0.35);
+      border-radius:var(--radius-lg); padding:20px;
+      margin-top:8px;
+    }
+    .aviso-plan p { font-size:0.8rem; color:var(--text-primary); line-height:1.7; }
+    .aviso-plan strong { color:#FF6726; }
+
+    /* Historial card */
+    .historial-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-md); padding:16px;
+      margin-bottom:8px; transition:all var(--transition);
+    }
+    .historial-card:hover { border-color:rgba(255,103,38,0.2); }
+    .historial-card .hc-nombre { font-size:0.88rem; font-weight:700; color:var(--text-primary); }
+    .historial-card .hc-meta { display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
+    .historial-card .hc-item { font-size:0.7rem; color:var(--text-muted); }
+    .historial-card .hc-item span { color:var(--text-secondary); font-weight:600; }
+
+    /* Pantalla sin racha */
+    .no-racha { text-align:center; padding:60px 20px; }
+    .no-racha .nr-icon { font-size:3.5rem; margin-bottom:16px; }
+    .no-racha h2 { margin-bottom:8px; font-size:1.3rem; }
+    .no-racha p { max-width:420px; margin:0 auto 24px; font-size:0.82rem; }
+
+    /* Alert infracción */
+    .infraccion-alert {
+      background:rgba(255,51,85,0.06); border:1px solid rgba(255,51,85,0.3);
+      border-radius:var(--radius-md); padding:14px 16px;
+      margin-bottom:8px;
+    }
+    .infraccion-alert .ia-rule { font-size:0.8rem; font-weight:700; color:#ff3355; margin-bottom:4px; }
+    .infraccion-alert .ia-detail { font-size:0.72rem; color:var(--text-muted); }
+
+    /* Margin badge */
+    .margin-badge { font-size:0.6rem; font-weight:700; padding:2px 7px; border-radius:99px; background:rgba(255,225,0,0.1); color:#ffe100; border:1px solid rgba(255,225,0,0.3); }
+
+    @media(max-width:640px) {
+      .racha-kpi-grid { grid-template-columns:1fr 1fr; }
+      .wstep-label { display:none; }
+      .rule-item { flex-direction:column; align-items:flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="loading-screen" id="loadingScreen">
+  <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" />
+  <p>Cargando Racha TPL...</p>
+</div>
+
+<div class="app-layout" id="appLayout" style="display:none">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="assets/logo-blanco.png" alt="TPL" class="logo-dark-mode" width="32" height="32" />
+      <div class="sidebar-logo-text">
+        <span class="brand-name">Trading Pro Lab</span>
+        <span class="brand-sub">Journal del Rey</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a class="nav-item" href="cuentas.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Mis Cuentas
+      </a>
+      <a class="nav-item" href="nueva-cuenta.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Nueva Cuenta
+      </a>
+      <a class="nav-item" href="escalador.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Escalador
+      </a>
+      <a class="nav-item active" href="racha.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Racha TPL
+      </a>
+      <div class="nav-section-label" style="margin-top:8px">Cuenta</div>
+      <a class="nav-item" href="perfil.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Mi Perfil
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="nav-item" onclick="handleLogout()" style="cursor:pointer;color:var(--red)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </div>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú"><span></span><span></span><span></span></button>
+      <div class="topbar-breadcrumb"><span>Racha TPL</span></div>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema"></button>
+      <div class="avatar" id="userAvatar">?</div>
+    </div>
+  </header>
+
+  <main class="main-content" id="mainContent">
+    <!-- Contenido dinámico -->
+  </main>
+</div>
+
+<!-- MODAL AVISO PLAN (bloqueo) -->
+<div class="modal-overlay" id="modalAviso">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#FF6726;margin-bottom:4px">⚠️ Importante</div>
+        <h2 style="font-size:1rem">El plan quedará bloqueado</h2>
+      </div>
+    </div>
+    <div class="aviso-plan" style="margin-bottom:20px">
+      <p>Una vez que inicies esta racha, las reglas que acabas de configurar quedan <strong>bloqueadas permanentemente</strong>. No podrás cambiarlas sin romper la racha y comenzar una nueva.</p>
+      <br>
+      <p>Si en el futuro necesitas ajustar tu plan, deberás iniciar una nueva racha. Todas tus rachas anteriores y su historial <strong>se conservan siempre</strong>.</p>
+      <br>
+      <p><strong>Revisa bien tus reglas antes de continuar.</strong></p>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="document.getElementById('modalAviso').classList.remove('open')">← Revisar reglas</button>
+      <button class="btn btn-primary" onclick="confirmarActivarRacha()">Entiendo, activar racha 🔥</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE EVALUACIÓN -->
+<div class="modal-overlay" id="modalEval" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2 style="font-size:1rem">Detalle de evaluación</h2>
+      <button class="modal-close" onclick="document.getElementById('modalEval').classList.remove('open')">✕</button>
+    </div>
+    <div id="evalDetail"></div>
+  </div>
+</div>
+
+<!-- MODAL RESOLVER PENDIENTE -->
+<div class="modal-overlay" id="modalPendiente" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 style="font-size:1rem">Resolver trade pendiente</h2>
+      <button class="modal-close" onclick="document.getElementById('modalPendiente').classList.remove('open')">✕</button>
+    </div>
+    <div id="pendienteDetail" style="margin-bottom:16px"></div>
+    <div class="input-group" style="margin-bottom:14px">
+      <label class="input-label">¿Cumpliste el plan en este trade?</label>
+      <div class="choice-group">
+        <button class="choice-btn" onclick="selectPendiente('valido',this)">✅ Sí, cumplí el plan</button>
+        <button class="choice-btn" onclick="selectPendiente('invalido',this)">❌ No, incumplí una regla</button>
+      </div>
+    </div>
+    <div class="input-group" style="margin-bottom:16px">
+      <label class="input-label">Notas (opcional)</label>
+      <textarea class="input" id="pendienteNota" placeholder="Explica brevemente..." style="min-height:60px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="document.getElementById('modalPendiente').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarResolucion()" id="btnGuardarRes">Guardar resolución</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, getDocs,
+  collection, query, orderBy, where, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBVxZcMxZNV7e79g-EbZwSmoHvyQ-XHH8A",
+  authDomain: "journal-del-rey.firebaseapp.com",
+  projectId: "journal-del-rey",
+  storageBucket: "journal-del-rey.firebasestorage.app",
+  messagingSenderId: "380863316017",
+  appId: "1:380863316017:web:a1dcdad1c5c2a9c1625510"
+};
+
+const fbApp = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+let currentUser = null;
+let rachaActiva = null;
+let todasLasEvals = [];
+let pendienteTradeId = null;
+let pendienteRachaId = null;
+let pendienteResolucion = null;
+let wizardPlanData = {};
+let userAccounts = [];
+
+// ── NIVELES ────────────────────────────────────────────────
+const NIVELES = [
+  { n:1, nombre:'El Explorador',        rango:'1–50',   enfoque:'MENTE' },
+  { n:2, nombre:'El Discípulo',         rango:'51–100', enfoque:'MENTE + MÉTODO' },
+  { n:3, nombre:'El Ejecutor',          rango:'101–150',enfoque:'MÉTODO' },
+  { n:4, nombre:'El Guardián del Capital', rango:'151–200', enfoque:'CAPITAL' },
+  { n:5, nombre:'El Estratega',         rango:'201–250',enfoque:'SISTEMA TPL' },
+  { n:6, nombre:'El Consistente',       rango:'251–300',enfoque:'CONSISTENCIA' },
+  { n:7, nombre:'El Profesional',       rango:'301–350',enfoque:'DOMINIO DEL SISTEMA' },
+  { n:8, nombre:'El Maestro TPL',       rango:'351–400',enfoque:'MENTE + MÉTODO + CAPITAL' },
+];
+
+function getNivel(tradesValidos) {
+  if (tradesValidos >= 401) {
+    const sub = Math.floor((tradesValidos - 401) / 50) + 1;
+    const subNombre = sub === 1 ? 'I' : sub === 2 ? 'II' : sub === 3 ? 'III' : sub === 4 ? 'IV' : 'V+';
+    return { n: 8 + sub, nombre: `El Rey TPL ${subNombre}`, rango: `${401+(sub-1)*50}+`, enfoque: 'ÉLITE' };
+  }
+  const idx = Math.min(Math.floor(tradesValidos / 50), 7);
+  return NIVELES[idx];
+}
+
+function getNivelProgress(tradesValidos) {
+  const escalonActual = Math.floor(tradesValidos / 50) * 50;
+  const progreso = tradesValidos - escalonActual;
+  return { progreso, total: 50, faltan: 50 - progreso };
+}
+
+// ── AUTH ───────────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  const userDoc = await getDoc(doc(db, 'users', user.uid));
+  if (!userDoc.exists() || userDoc.data().active === false) {
+    await signOut(auth); window.location.href = 'index.html'; return;
+  }
+  currentUser = user;
+  document.getElementById('userAvatar').textContent = (userDoc.data().displayName || 'R').charAt(0).toUpperCase();
+
+  // Cargar cuentas del usuario
+  const accsSnap = await getDocs(collection(db, 'users', user.uid, 'accounts'));
+  userAccounts = accsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // Buscar racha activa
+  await cargarRachaActiva();
+
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('appLayout').style.display = 'flex';
+});
+
+async function cargarRachaActiva() {
+  const rachasSnap = await getDocs(
+    query(collection(db, 'users', currentUser.uid, 'rachas'), where('estado', '==', 'activa'))
+  );
+  if (!rachasSnap.empty) {
+    rachaActiva = { id: rachasSnap.docs[0].id, ...rachasSnap.docs[0].data() };
+    await renderDashboardRacha();
+  } else {
+    renderSinRacha();
+  }
+}
+
+// ── RENDER SIN RACHA ───────────────────────────────────────
+function renderSinRacha() {
+  document.getElementById('mainContent').innerHTML = `
+  <div class="no-racha">
+    <div class="nr-icon">⚡</div>
+    <h2>Racha TPL — Disciplina que Escala</h2>
+    <p>Tu racha no crece por operar más. Crece por ejecutar mejor tu plan. Cada operación válida te acerca al siguiente nivel.</p>
+    <button class="btn btn-primary btn-lg" onclick="iniciarWizard()">
+      🔥 Crear mi racha de disciplina
+    </button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:800px;margin:0 auto">
+    ${NIVELES.map((n,i) => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;opacity:${i<3?1:0.5}">
+      <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Nivel ${n.n} · ${n.rango} trades</div>
+      <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary)">${n.nombre}</div>
+      <div style="font-size:0.62rem;color:#FF6726;margin-top:3px">${n.enfoque}</div>
+    </div>`).join('')}
+    <div style="background:linear-gradient(135deg,rgba(255,103,38,0.1),rgba(255,103,38,0.04));border:1px solid rgba(255,103,38,0.3);border-radius:var(--radius-md);padding:14px">
+      <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Nivel 9+ · 401+ trades</div>
+      <div style="font-size:0.9rem;font-weight:700;color:#FF6726;text-shadow:0 0 12px rgba(255,103,38,0.5)">El Rey TPL</div>
+      <div style="font-size:0.62rem;color:#FF6726;margin-top:3px">ÉLITE — Sin límite superior</div>
+    </div>
+  </div>`;
+}
+
+// ── RENDER DASHBOARD RACHA ─────────────────────────────────
+async function renderDashboardRacha() {
+  const r = rachaActiva;
+  const nivel = getNivel(r.tradesValidos || 0);
+  const { progreso, total, faltan } = getNivelProgress(r.tradesValidos || 0);
+  const pctBarra = Math.round(progreso / total * 100);
+  const cumplimiento = r.cumplimientoPct || 100;
+  const cuenta = userAccounts.find(a => a.id === r.accountId);
+
+  document.getElementById('mainContent').innerHTML = `
+  <!-- Hero -->
+  <div class="racha-hero">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <span class="racha-badge activa">⚡ Activa</span>
+        <div class="nivel-display">${nivel.nombre}</div>
+        <div class="nivel-subtitle">${nivel.enfoque} · ${r.nombre || 'Mi Racha'}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px">Cuenta: ${cuenta?.name || '—'} · Desde ${r.fechaInicio?.toDate?.()?.toLocaleDateString('es-ES') || '—'}</div>
+      </div>
+      <div style="text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="mostrarHistorial()">📋 Historial</button>
+      </div>
+    </div>
+    <div class="racha-progress-wrap">
+      <div class="racha-progress-label">
+        <span style="color:#FF6726;font-weight:700">${r.tradesValidos || 0} trades válidos</span>
+        <span>${faltan} para ${nivel.n < 9 ? NIVELES[Math.min(nivel.n, 7)].nombre : 'Rey TPL ' + (nivel.n - 7)}</span>
+      </div>
+      <div class="racha-progress-bar">
+        <div class="racha-progress-fill" style="width:${pctBarra}%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="racha-kpi-grid">
+    <div class="racha-kpi"><div class="rk-label">Trades válidos</div><div class="rk-val" style="color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,0.5)">${r.tradesValidos || 0}</div><div class="rk-sub">acumulados</div></div>
+    <div class="racha-kpi"><div class="rk-label">Cumplimiento</div><div class="rk-val" style="color:${cumplimiento>=90?'#00ff88':'#ff3355'};text-shadow:0 0 8px ${cumplimiento>=90?'rgba(0,255,136,0.5)':'rgba(255,51,85,0.5)'}">${cumplimiento.toFixed(1)}%</div><div class="rk-sub">del plan</div></div>
+    <div class="racha-kpi"><div class="rk-label">Infracciones</div><div class="rk-val" style="color:${(r.infraccionesCriticas||0)===0?'#00ff88':'#ff3355'}">${r.infraccionesCriticas || 0}</div><div class="rk-sub">críticas</div></div>
+    <div class="racha-kpi"><div class="rk-label">Nivel actual</div><div class="rk-val" style="color:#FF6726;text-shadow:0 0 8px rgba(255,103,38,0.5)">${nivel.n}</div><div class="rk-sub">${nivel.nombre}</div></div>
+    <div class="racha-kpi"><div class="rk-label">Trades evaluados</div><div class="rk-val">${r.tradesEvaluados || 0}</div><div class="rk-sub">total</div></div>
+    <div class="racha-kpi"><div class="rk-label">Días sin operar</div><div class="rk-val" style="color:var(--text-muted)">—</div><div class="rk-sub" style="color:#00ff88">sin penalización</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="racha-tabs">
+    <button class="racha-tab active" onclick="showRachaTab('resumen')">📊 Resumen</button>
+    <button class="racha-tab" onclick="showRachaTab('evaluaciones')">✅ Evaluaciones</button>
+    <button class="racha-tab" onclick="showRachaTab('niveles')">🏆 Niveles</button>
+    <button class="racha-tab" onclick="showRachaTab('plan')">📋 Mi Plan</button>
+    <button class="racha-tab" onclick="showRachaTab('historial')">🕒 Historial</button>
+    <button class="racha-tab" onclick="showRachaTab('estadisticas')">📈 Estadísticas</button>
+  </div>
+
+  <!-- TAB RESUMEN -->
+  <div class="racha-tab-content active" id="rtab-resumen">
+    <div class="card" style="padding:20px;margin-bottom:16px">
+      <div class="card-header"><div class="card-title">Próxima acción</div></div>
+      <div id="proximaAccion" style="font-size:0.88rem;color:var(--text-primary);line-height:1.6">Analizando...</div>
+    </div>
+    <div class="card" style="padding:20px">
+      <div class="card-header"><div class="card-title">Reglas activas — resumen</div><span class="badge badge-orange">Plan bloqueado</span></div>
+      <div id="reglasResumen" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:4px"></div>
+    </div>
+  </div>
+
+  <!-- TAB EVALUACIONES -->
+  <div class="racha-tab-content" id="rtab-evaluaciones">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <select class="input" style="width:auto;font-size:0.78rem" id="filtroEval" onchange="filtrarEvals()">
+        <option value="">Todas</option>
+        <option value="valido">✅ Válidas</option>
+        <option value="invalido">❌ Inválidas</option>
+        <option value="pendiente">⏳ Pendientes</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="cargarEvals()">↻ Actualizar</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>Fecha</th><th>Activo</th><th>Resultado</th><th>Estado racha</th><th>Margen usado</th><th>Acción</th></tr></thead>
+          <tbody id="evalsBody"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB NIVELES -->
+  <div class="racha-tab-content" id="rtab-niveles">
+    <div class="section-header" style="margin-bottom:14px">
+      <div class="section-title">Escalera de disciplina</div>
+    </div>
+    <div id="nivelesLadder"></div>
+  </div>
+
+  <!-- TAB PLAN -->
+  <div class="racha-tab-content" id="rtab-plan">
+    <div style="background:rgba(255,103,38,0.06);border:1px solid rgba(255,103,38,0.2);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font-size:0.78rem;color:#FF6726">
+      🔒 Plan bloqueado — Racha activa. No puedes modificar las reglas hasta iniciar una nueva racha.
+    </div>
+    <div id="planDetalle"></div>
+  </div>
+
+  <!-- TAB HISTORIAL -->
+  <div class="racha-tab-content" id="rtab-historial">
+    <div id="historialContent"><div style="text-align:center;padding:30px;color:var(--text-muted)">Cargando historial...</div></div>
+  </div>
+
+  <!-- TAB ESTADÍSTICAS -->
+  <div class="racha-tab-content" id="rtab-estadisticas">
+    <div id="statsContent"><div style="text-align:center;padding:30px;color:var(--text-muted)">Cargando estadísticas...</div></div>
+  </div>`;
+
+  // Cargar contenido inicial
+  renderProximaAccion();
+  renderReglasResumen();
+  renderNivelesLadder();
+  renderPlanDetalle();
+  await cargarEvals();
+}
+
+function renderProximaAccion() {
+  const r = rachaActiva;
+  const { faltan } = getNivelProgress(r.tradesValidos || 0);
+  const nivel = getNivel(r.tradesValidos || 0);
+  let msg = '';
+  const plan = r.plan || {};
+
+  if ((r.tradesValidos || 0) === 0) {
+    msg = `Registra tu primera operación en el Journal de la cuenta <strong>${userAccounts.find(a=>a.id===r.accountId)?.name || '—'}</strong>. El sistema la evaluará automáticamente contra tu plan.`;
+  } else if ((r.infraccionesCriticas || 0) > 0) {
+    msg = `⚠️ Tienes ${r.infraccionesCriticas} infracción(es) crítica(s) registradas. Revisa la pestaña Evaluaciones para ver los detalles.`;
+  } else if (faltan <= 5) {
+    msg = `¡Estás a solo <strong>${faltan} trades válidos</strong> de alcanzar el siguiente nivel! Mantén la disciplina y ejecuta tu plan.`;
+  } else {
+    msg = `Vas bien. Te faltan <strong>${faltan} trades válidos</strong> para llegar a <strong>${nivel.n < 9 ? (NIVELES[Math.min(nivel.n, 7)]?.nombre || 'El Rey TPL') : 'El Rey TPL'}</strong>. Recuerda: la racha no se rompe por no operar. Solo se rompe si incumples una regla crítica.`;
+  }
+  const el = document.getElementById('proximaAccion');
+  if (el) el.innerHTML = msg;
+}
+
+function renderReglasResumen() {
+  const plan = rachaActiva?.plan || {};
+  const items = [
+    { label:'Riesgo máx./trade', val: plan.riesgoMaxPct ? plan.riesgoMaxPct+'%' : '—' },
+    { label:'Trades/día máx.', val: plan.maxTradesDay || '—' },
+    { label:'Pérdida diaria máx.', val: plan.perdidaDiariaMaxPct ? plan.perdidaDiariaMaxPct+'%' : '—' },
+    { label:'RR mínimo', val: plan.rrMin ? '1:'+plan.rrMin : '—' },
+    { label:'Horario', val: plan.horarioInicio && plan.horarioFin ? plan.horarioInicio+'–'+plan.horarioFin : 'Sin límite' },
+    { label:'Margen de error', val: '±10%', extra: true },
+  ];
+  const el = document.getElementById('reglasResumen');
+  if (!el) return;
+  el.innerHTML = items.map(i => `
+  <div style="background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px">
+    <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px">${i.label}</div>
+    <div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:${i.extra?'#ffe100':'#FF6726'}">${i.val}</div>
+  </div>`).join('');
+}
+
+function renderNivelesLadder() {
+  const tradesValidos = rachaActiva?.tradesValidos || 0;
+  const nivelActual = getNivel(tradesValidos);
+  const el = document.getElementById('nivelesLadder');
+  if (!el) return;
+
+  const allNiveles = [...NIVELES, { n:9, nombre:'El Rey TPL', rango:'401+', enfoque:'ÉLITE' }];
+  el.innerHTML = allNiveles.map(n => {
+    const minTrades = (n.n - 1) * 50 + (n.n === 9 ? 1 : 1);
+    const reached = tradesValidos >= minTrades + (n.n < 9 ? 49 : 0);
+    const isCurrent = n.n === nivelActual.n || (n.n === 9 && nivelActual.n >= 9);
+    const cls = reached ? 'desbloqueado' : isCurrent ? 'actual' : 'bloqueado';
+
+    return `<div class="nivel-card ${cls}">
+      <div class="nivel-num">${reached ? '✓' : n.n}</div>
+      <div class="nivel-info">
+        <div class="nivel-nombre">${n.nombre}</div>
+        <div class="nivel-rango">${n.rango} trades válidos</div>
+        <div class="nivel-enfoque">${n.enfoque}</div>
+      </div>
+      ${isCurrent ? '<span class="badge badge-orange">ACTUAL</span>' : reached ? '<span class="badge badge-green">✓</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderPlanDetalle() {
+  const plan = rachaActiva?.plan || {};
+  const el = document.getElementById('planDetalle');
+  if (!el) return;
+
+  const secciones = [
+    { titulo:'Identificación', items: [
+      { label:'Nombre', val: rachaActiva?.nombre },
+      { label:'Cuenta', val: userAccounts.find(a=>a.id===rachaActiva?.accountId)?.name },
+      { label:'Instrumentos', val: plan.instrumentos?.join(', ') },
+      { label:'Estrategia', val: plan.estrategia },
+      { label:'Objetivo', val: plan.objetivo },
+    ]},
+    { titulo:'Capital y límites', items: [
+      { label:'Pérdida diaria máx.', val: plan.perdidaDiariaMaxPct ? plan.perdidaDiariaMaxPct+'%' : null },
+      { label:'Pérdida semanal máx.', val: plan.perdidaSemanalMaxPct ? plan.perdidaSemanalMaxPct+'%' : null },
+      { label:'Pérdida mensual máx.', val: plan.perdidaMensualMaxPct ? plan.perdidaMensualMaxPct+'%' : null },
+      { label:'Drawdown máx.', val: plan.drawdownMaxPct ? plan.drawdownMaxPct+'%' : null },
+    ]},
+    { titulo:'Riesgo por operación', items: [
+      { label:'Riesgo máx. por trade (%)', val: plan.riesgoMaxPct ? plan.riesgoMaxPct+'%' : null },
+      { label:'Riesgo máx. por trade ($)', val: plan.riesgoMaxUsd ? '$'+plan.riesgoMaxUsd : null },
+      { label:'RR mínimo', val: plan.rrMin ? '1:'+plan.rrMin : null },
+      { label:'RR máximo', val: plan.rrMax ? '1:'+plan.rrMax : null },
+      { label:'Stop Loss obligatorio', val: plan.slObligatorio ? 'Sí' : 'No' },
+    ]},
+    { titulo:'Ejecución', items: [
+      { label:'Máx. trades/día', val: plan.maxTradesDay },
+      { label:'Horario', val: plan.horarioInicio && plan.horarioFin ? plan.horarioInicio+' – '+plan.horarioFin : null },
+      { label:'Días habilitados', val: plan.diasHabilitados?.join(', ') },
+      { label:'Setups permitidos', val: plan.setups?.join(', ') },
+      { label:'Operar en noticias', val: plan.operarNoticias !== undefined ? (plan.operarNoticias ? 'Permitido' : 'Prohibido') : null },
+    ]},
+    { titulo:'Protección', items: [
+      { label:'Máx. pérdidas consecutivas', val: plan.maxPérdidasConsecutivas },
+      { label:'Pausa tras límite diario', val: plan.pausaLimiteDiario ? 'Sí' : null },
+    ]},
+  ];
+
+  el.innerHTML = secciones.map(s => {
+    const itemsValidos = s.items.filter(i => i.val !== null && i.val !== undefined);
+    if (!itemsValidos.length) return '';
+    return `<div class="card" style="padding:16px;margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:12px">${s.titulo}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        ${itemsValidos.map(i => `<div style="background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:0.6rem;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">${i.label}</div>
+          <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary)">${i.val || '—'}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function cargarEvals() {
+  if (!rachaActiva) return;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users', currentUser.uid, 'rachas', rachaActiva.id, 'evaluaciones'),
+        orderBy('evaluadoEn', 'desc'))
+    );
+    todasLasEvals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderEvalsTable(todasLasEvals);
+  } catch(e) {
+    const el = document.getElementById('evalsBody');
+    if (el) el.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Sin evaluaciones aún.</td></tr>';
+  }
+}
+
+function renderEvalsTable(evals) {
+  const tbody = document.getElementById('evalsBody');
+  if (!tbody) return;
+  if (!evals.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Aún no hay operaciones evaluadas. Registra trades en el journal de esta cuenta.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = evals.map(e => {
+    const cls = e.resultado === 'valido' ? 'valido' : e.resultado === 'invalido' ? 'invalido' : 'pendiente';
+    const etiqueta = e.resultado === 'valido' ? '✅ Válida' : e.resultado === 'invalido' ? '❌ Inválida' : '⏳ Pendiente';
+    const color = e.resultado === 'valido' ? '#00ff88' : e.resultado === 'invalido' ? '#ff3355' : '#ffe100';
+    const margen = e.infracciones?.some(i => i.margenAplicado) ? '<span class="margin-badge">±10%</span>' : '—';
+    return `<tr>
+      <td><div class="eval-dot ${cls}"></div></td>
+      <td style="color:var(--text-muted);font-size:0.78rem">${e.fecha || '—'}</td>
+      <td style="font-weight:700;color:var(--text-primary)">${e.activo || '—'}</td>
+      <td><span class="badge ${e.resultado==='valido'?'badge-green':e.resultado==='invalido'?'badge-red':'badge-yellow'}">${etiqueta}</span></td>
+      <td style="font-family:var(--font-mono);color:${color};font-weight:700">${etiqueta}</td>
+      <td>${margen}</td>
+      <td>
+        ${e.resultado === 'pendiente'
+          ? `<button class="btn btn-sm" style="background:rgba(255,225,0,0.1);color:#ffe100;border:1px solid rgba(255,225,0,0.3);font-size:0.68rem" onclick="abrirPendiente('${e.id}','${e.tradeId||''}')">Resolver</button>`
+          : `<button class="btn btn-ghost btn-sm" style="font-size:0.68rem" onclick="verDetalle('${e.id}')">Ver</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+window.filtrarEvals = function() {
+  const filtro = document.getElementById('filtroEval').value;
+  const filtradas = filtro ? todasLasEvals.filter(e => e.resultado === filtro) : todasLasEvals;
+  renderEvalsTable(filtradas);
+};
+
+window.verDetalle = function(evalId) {
+  const e = todasLasEvals.find(x => x.id === evalId);
+  if (!e) return;
+  const el = document.getElementById('evalDetail');
+  const infrs = e.infracciones || [];
+  el.innerHTML = `
+  <div style="margin-bottom:12px">
+    <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:4px">${e.fecha || '—'} · ${e.activo || '—'}</div>
+    <span class="badge ${e.resultado==='valido'?'badge-green':e.resultado==='invalido'?'badge-red':'badge-yellow'}">${e.resultado?.toUpperCase()}</span>
+    ${e.notasManual ? `<p style="margin-top:8px;font-size:0.78rem;color:var(--text-secondary)">${e.notasManual}</p>` : ''}
+  </div>
+  ${infrs.length ? `
+  <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Infracciones detectadas</div>
+  ${infrs.map(i => `
+  <div class="infraccion-alert">
+    <div class="ia-rule">${i.regla} ${i.margenAplicado ? '<span class="margin-badge">Margen ±10% aplicado</span>' : ''}</div>
+    <div class="ia-detail">Registrado: ${i.valorRegistrado} · Permitido: ${i.valorPermitido}</div>
+    <div class="ia-detail" style="color:${i.categoria==='critica'?'#ff3355':'#ffe100'};font-weight:600;margin-top:2px">${i.categoria === 'critica' ? '🚨 Crítica — rompe la racha' : '⚠️ Revisión'}</div>
+  </div>`).join('')}` : '<div style="color:var(--green);font-size:0.82rem">✅ Sin infracciones detectadas</div>'}`;
+  document.getElementById('modalEval').classList.add('open');
+};
+
+window.abrirPendiente = function(evalId, tradeId) {
+  pendienteTradeId = evalId;
+  pendienteRachaId = rachaActiva.id;
+  pendienteResolucion = null;
+  document.getElementById('pendienteNota').value = '';
+  document.querySelectorAll('#modalPendiente .choice-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('pendienteDetail').innerHTML = `
+  <div style="background:rgba(255,225,0,0.06);border:1px solid rgba(255,225,0,0.2);border-radius:var(--radius-md);padding:12px 14px;font-size:0.78rem;color:#ffe100">
+    ⏳ Este trade quedó pendiente porque faltaban datos para evaluarlo automáticamente. Debes confirmarlo manualmente.
+  </div>`;
+  document.getElementById('modalPendiente').classList.add('open');
+};
+
+window.selectPendiente = function(val, btn) {
+  pendienteResolucion = val;
+  document.querySelectorAll('#modalPendiente .choice-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+};
+
+window.guardarResolucion = async function() {
+  if (!pendienteResolucion) { showToast('Selecciona una opción.', 'error'); return; }
+  const btn = document.getElementById('btnGuardarRes');
+  btn.disabled = true; btn.innerHTML = '<div class="loader"></div>';
+  try {
+    const nota = document.getElementById('pendienteNota').value.trim();
+    await updateDoc(
+      doc(db, 'users', currentUser.uid, 'rachas', pendienteRachaId, 'evaluaciones', pendienteTradeId),
+      { resultado: pendienteResolucion, cumplePlan: pendienteResolucion === 'valido', notasManual: nota || null }
+    );
+    if (pendienteResolucion === 'valido') {
+      await updateDoc(doc(db, 'users', currentUser.uid, 'rachas', pendienteRachaId), {
+        tradesValidos: (rachaActiva.tradesValidos || 0) + 1,
+        tradesEvaluados: (rachaActiva.tradesEvaluados || 0) + 1,
+      });
+      rachaActiva.tradesValidos = (rachaActiva.tradesValidos || 0) + 1;
+      rachaActiva.tradesEvaluados = (rachaActiva.tradesEvaluados || 0) + 1;
+    }
+    document.getElementById('modalPendiente').classList.remove('open');
+    showToast('✅ Resolución guardada.', 'success');
+    await cargarEvals();
+    renderDashboardRacha();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'Guardar resolución';
+  }
+};
+
+async function mostrarHistorial() {
+  showRachaTab('historial');
+  const snap = await getDocs(collection(db, 'users', currentUser.uid, 'historialRachas'));
+  const historial = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const el = document.getElementById('historialContent');
+  if (!el) return;
+  if (!historial.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Sin rachas anteriores. Cuando termines una racha, aparecerá aquí.</div>';
+    return;
+  }
+  el.innerHTML = historial.map(h => `
+  <div class="historial-card">
+    <div class="hc-nombre">${h.nombre || 'Racha'}</div>
+    <div class="hc-meta">
+      <div class="hc-item">Nivel máx: <span>${h.nivelMaximo || 1}</span></div>
+      <div class="hc-item">Trades válidos: <span>${h.tradesValidos || 0}</span></div>
+      <div class="hc-item">Cumplimiento: <span>${h.cumplimientoPromedio?.toFixed(1) || '—'}%</span></div>
+      <div class="hc-item">Motivo fin: <span style="color:#ff3355">${h.motivoFin || '—'}</span></div>
+      ${h.fechaInicio?.toDate ? `<div class="hc-item">Inicio: <span>${h.fechaInicio.toDate().toLocaleDateString('es-ES')}</span></div>` : ''}
+      ${h.fechaFin?.toDate ? `<div class="hc-item">Fin: <span>${h.fechaFin.toDate().toLocaleDateString('es-ES')}</span></div>` : ''}
+    </div>
+  </div>`).join('');
+}
+
+// ── WIZARD CREAR RACHA ─────────────────────────────────────
+let wizardStep = 1;
+
+window.iniciarWizard = function() {
+  wizardStep = 1;
+  wizardPlanData = {};
+  document.getElementById('mainContent').innerHTML = renderWizardHTML();
+  actualizarWizardSteps();
+};
+
+function renderWizardHTML() {
+  const cuentasOptions = userAccounts.map(a =>
+    `<option value="${a.id}">${a.name} ($${parseFloat(a.size||0).toLocaleString()})</option>`
+  ).join('');
+
+  const dias = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+  return `
+  <div style="max-width:680px;margin:0 auto">
+    <div style="margin-bottom:24px">
+      <h1>Crear Racha de Disciplina</h1>
+      <p style="margin-top:4px">Configura las reglas de tu plan. Una vez activada, no podrás modificarlas.</p>
+    </div>
+
+    <!-- Steps -->
+    <div class="wizard-steps" style="margin-bottom:28px">
+      <div class="wstep" id="ws1"><div class="wstep-num">1</div><span class="wstep-label">Identidad</span></div>
+      <div class="wstep-line"></div>
+      <div class="wstep" id="ws2"><div class="wstep-num">2</div><span class="wstep-label">Capital</span></div>
+      <div class="wstep-line"></div>
+      <div class="wstep" id="ws3"><div class="wstep-num">3</div><span class="wstep-label">Riesgo</span></div>
+      <div class="wstep-line"></div>
+      <div class="wstep" id="ws4"><div class="wstep-num">4</div><span class="wstep-label">Disciplina</span></div>
+    </div>
+
+    <!-- PASO 1 -->
+    <div class="wizard-form active" id="wf1">
+      <div class="form-section-title">Identificación de la racha</div>
+      <div class="input-group"><label class="input-label">Nombre de la racha</label><input type="text" class="input" id="w_nombre" placeholder="Ej: Racha Q4 2026, Mi racha TPL..." /></div>
+      <div class="input-group"><label class="input-label">Cuenta asociada</label><select class="input" id="w_cuenta">${cuentasOptions}</select></div>
+      <div class="input-group"><label class="input-label">Instrumentos autorizados (separados por coma)</label><input type="text" class="input" id="w_instrumentos" placeholder="Ej: EURUSD, XAUUSD, NAS100" /></div>
+      <div class="input-group"><label class="input-label">Estrategia o versión del plan</label><input type="text" class="input" id="w_estrategia" placeholder="Ej: TPL v3, SMC Londres, CRT..." /></div>
+      <div class="input-group"><label class="input-label">Objetivo personal (opcional)</label><input type="text" class="input" id="w_objetivo" placeholder="Ej: 3 meses sin infracciones críticas..." /></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="wizardNext(2)">Siguiente →</button></div>
+    </div>
+
+    <!-- PASO 2 -->
+    <div class="wizard-form" id="wf2">
+      <div class="form-section-title">Capital, límites y ejecución</div>
+      <div class="grid-2" style="gap:12px">
+        <div class="input-group"><label class="input-label">Pérdida diaria máx. (%)</label><input type="number" class="input" id="w_perdDia" placeholder="1.5" min="0" step="0.1" /></div>
+        <div class="input-group"><label class="input-label">Pérdida semanal máx. (%)</label><input type="number" class="input" id="w_perdSem" placeholder="3" min="0" step="0.1" /></div>
+        <div class="input-group"><label class="input-label">Pérdida mensual máx. (%)</label><input type="number" class="input" id="w_perdMes" placeholder="6" min="0" step="0.1" /></div>
+        <div class="input-group"><label class="input-label">Drawdown máx. cuenta (%)</label><input type="number" class="input" id="w_dd" placeholder="10" min="0" step="0.1" /></div>
+        <div class="input-group"><label class="input-label">Máx. operaciones por día</label><input type="number" class="input" id="w_maxDay" placeholder="3" min="1" step="1" /></div>
+        <div class="input-group"><label class="input-label">Máx. pérdidas consecutivas</label><input type="number" class="input" id="w_maxPerd" placeholder="2" min="1" step="1" /></div>
+      </div>
+      <div class="grid-2" style="gap:12px">
+        <div class="input-group"><label class="input-label">Horario inicio</label><input type="time" class="input" id="w_hIni" /></div>
+        <div class="input-group"><label class="input-label">Horario fin</label><input type="time" class="input" id="w_hFin" /></div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Días habilitados</label>
+        <div class="choice-group" id="w_dias">
+          ${dias.map(d => `<button class="choice-btn selected" onclick="toggleDia(this,'${d}')">${d}</button>`).join('')}
+        </div>
+      </div>
+      <div class="input-group"><label class="input-label">Setups permitidos (separados por coma)</label><input type="text" class="input" id="w_setups" placeholder="Ej: TPL-A, FVG, OB, CRT..." /></div>
+      <div style="display:flex;justify-content:space-between">
+        <button class="btn btn-ghost" onclick="wizardNext(1)">← Atrás</button>
+        <button class="btn btn-primary" onclick="wizardNext(3)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- PASO 3 -->
+    <div class="wizard-form" id="wf3">
+      <div class="form-section-title">Gestión del riesgo por operación</div>
+      <div class="grid-2" style="gap:12px">
+        <div class="input-group"><label class="input-label">Riesgo máx. por trade (%)</label><input type="number" class="input" id="w_riesgoMaxPct" placeholder="0.5" min="0" step="0.01" /></div>
+        <div class="input-group"><label class="input-label">Riesgo máx. por trade ($)</label><input type="number" class="input" id="w_riesgoMaxUsd" placeholder="50" min="0" step="1" /></div>
+        <div class="input-group"><label class="input-label">RR mínimo aceptado (ej: 2 = 1:2)</label><input type="number" class="input" id="w_rrMin" placeholder="2" min="0.5" step="0.1" /></div>
+        <div class="input-group"><label class="input-label">RR máximo (opcional)</label><input type="number" class="input" id="w_rrMax" placeholder="10" min="0" step="0.1" /></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.82rem;color:var(--text-secondary)">
+          <input type="checkbox" id="w_slOblig" checked style="accent-color:#FF6726;width:16px;height:16px"> Stop Loss obligatorio en cada trade
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.82rem;color:var(--text-secondary)">
+          <input type="checkbox" id="w_noRevanche" checked style="accent-color:#FF6726;width:16px;height:16px"> Prohibir trading por venganza (FOMO/revenge rompe racha)
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.82rem;color:var(--text-secondary)">
+          <input type="checkbox" id="w_noNoticias" style="accent-color:#FF6726;width:16px;height:16px"> Prohibir operar en noticias de alto impacto
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.82rem;color:var(--text-secondary)">
+          <input type="checkbox" id="w_checklistOblig" style="accent-color:#FF6726;width:16px;height:16px"> Checklist pre-trade obligatorio (incompleto = pendiente)
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.82rem;color:var(--text-secondary)">
+          <input type="checkbox" id="w_emocionOblig" style="accent-color:#FF6726;width:16px;height:16px"> Registro emocional obligatorio (vacío = pendiente)
+        </label>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <button class="btn btn-ghost" onclick="wizardNext(2)">← Atrás</button>
+        <button class="btn btn-primary" onclick="wizardNext(4)">Ver confirmación →</button>
+      </div>
+    </div>
+
+    <!-- PASO 4 -->
+    <div class="wizard-form" id="wf4">
+      <div class="form-section-title">Confirmar y activar</div>
+      <div id="resumenPlan" style="margin-bottom:16px"></div>
+      <div class="aviso-plan">
+        <p>⚠️ <strong>El plan no se puede modificar mientras la racha esté activa.</strong></p>
+        <br>
+        <p>Una vez que inicies esta racha, las reglas que acabas de configurar quedan bloqueadas permanentemente. No podrás cambiarlas sin romper la racha y comenzar una nueva.</p>
+        <br>
+        <p>Si en el futuro necesitas ajustar tu plan, deberás iniciar una nueva racha. Todas tus rachas anteriores y su historial <strong>se conservan siempre</strong>.</p>
+        <br>
+        <p>El sistema aplicará un <strong>margen de error del 10%</strong> sobre todas las reglas numéricas para absorber comisiones, spreads y diferencias de ejecución. Las reglas binarias (horario, setup, activo) no tienen margen.</p>
+        <br>
+        <p><strong>Revisa bien tus reglas antes de continuar.</strong></p>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px">
+        <button class="btn btn-ghost" onclick="wizardNext(3)">← Revisar</button>
+        <button class="btn btn-primary btn-lg" onclick="mostrarModalAviso()">🔥 Activar racha</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.wizardNext = function(step) {
+  if (step > wizardStep) {
+    // Validar antes de avanzar
+    if (wizardStep === 1) {
+      if (!document.getElementById('w_nombre').value.trim()) { showToast('Escribe un nombre para la racha.', 'error'); return; }
+      if (!document.getElementById('w_instrumentos').value.trim()) { showToast('Indica al menos un instrumento autorizado.', 'error'); return; }
+    }
+  }
+  document.querySelector('.wizard-form.active')?.classList.remove('active');
+  document.getElementById('wf'+step).classList.add('active');
+  wizardStep = step;
+  actualizarWizardSteps();
+  if (step === 4) renderResumenPlan();
+};
+
+function actualizarWizardSteps() {
+  [1,2,3,4].forEach(i => {
+    const el = document.getElementById('ws'+i);
+    if (!el) return;
+    el.className = 'wstep' + (i === wizardStep ? ' active' : i < wizardStep ? ' done' : '');
+    const line = el.nextElementSibling;
+    if (line?.classList.contains('wstep-line')) {
+      line.className = 'wstep-line' + (i < wizardStep ? ' done' : '');
+    }
+  });
+}
+
+function renderResumenPlan() {
+  const el = document.getElementById('resumenPlan');
+  if (!el) return;
+  const cuenta = userAccounts.find(a => a.id === document.getElementById('w_cuenta')?.value);
+  const items = [
+    ['Nombre', document.getElementById('w_nombre')?.value],
+    ['Cuenta', cuenta?.name],
+    ['Instrumentos', document.getElementById('w_instrumentos')?.value],
+    ['Estrategia', document.getElementById('w_estrategia')?.value],
+    ['Pérdida diaria máx.', document.getElementById('w_perdDia')?.value ? document.getElementById('w_perdDia').value+'%' : null],
+    ['Pérdida semanal máx.', document.getElementById('w_perdSem')?.value ? document.getElementById('w_perdSem').value+'%' : null],
+    ['Máx. trades/día', document.getElementById('w_maxDay')?.value],
+    ['Riesgo máx./trade', document.getElementById('w_riesgoMaxPct')?.value ? document.getElementById('w_riesgoMaxPct').value+'%' : null],
+    ['RR mínimo', document.getElementById('w_rrMin')?.value ? '1:'+document.getElementById('w_rrMin').value : null],
+    ['Horario', document.getElementById('w_hIni')?.value && document.getElementById('w_hFin')?.value ? document.getElementById('w_hIni').value+' – '+document.getElementById('w_hFin').value : null],
+    ['Setups', document.getElementById('w_setups')?.value],
+  ].filter(i => i[1]);
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:16px">
+    ${items.map(i => `<div style="background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px">
+      <div style="font-size:0.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px">${i[0]}</div>
+      <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary)">${i[1]}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+window.toggleDia = function(btn, dia) {
+  btn.classList.toggle('selected');
+};
+
+window.mostrarModalAviso = function() {
+  document.getElementById('modalAviso').classList.add('open');
+};
+
+window.confirmarActivarRacha = async function() {
+  document.getElementById('modalAviso').classList.remove('open');
+  const diasSeleccionados = [...document.querySelectorAll('#w_dias .choice-btn.selected')].map(b => b.textContent.trim());
+  const plan = {
+    instrumentos: document.getElementById('w_instrumentos').value.split(',').map(s=>s.trim()).filter(Boolean),
+    estrategia: document.getElementById('w_estrategia').value.trim(),
+    objetivo: document.getElementById('w_objetivo').value.trim(),
+    perdidaDiariaMaxPct: parseFloat(document.getElementById('w_perdDia').value) || null,
+    perdidaSemanalMaxPct: parseFloat(document.getElementById('w_perdSem').value) || null,
+    perdidaMensualMaxPct: parseFloat(document.getElementById('w_perdMes').value) || null,
+    drawdownMaxPct: parseFloat(document.getElementById('w_dd').value) || null,
+    maxTradesDay: parseInt(document.getElementById('w_maxDay').value) || null,
+    maxPérdidasConsecutivas: parseInt(document.getElementById('w_maxPerd').value) || null,
+    horarioInicio: document.getElementById('w_hIni').value || null,
+    horarioFin: document.getElementById('w_hFin').value || null,
+    diasHabilitados: diasSeleccionados,
+    setups: document.getElementById('w_setups').value.split(',').map(s=>s.trim()).filter(Boolean),
+    riesgoMaxPct: parseFloat(document.getElementById('w_riesgoMaxPct').value) || null,
+    riesgoMaxUsd: parseFloat(document.getElementById('w_riesgoMaxUsd').value) || null,
+    rrMin: parseFloat(document.getElementById('w_rrMin').value) || null,
+    rrMax: parseFloat(document.getElementById('w_rrMax').value) || null,
+    slObligatorio: document.getElementById('w_slOblig').checked,
+    prohibirRevenge: document.getElementById('w_noRevanche').checked,
+    operarNoticias: !document.getElementById('w_noNoticias').checked,
+    checklistObligatorio: document.getElementById('w_checklistOblig').checked,
+    emocionObligatoria: document.getElementById('w_emocionOblig').checked,
+    margenError: 0.10,
+  };
+
+  try {
+    const rachaData = {
+      nombre: document.getElementById('w_nombre').value.trim(),
+      accountId: document.getElementById('w_cuenta').value,
+      estado: 'activa',
+      fechaInicio: serverTimestamp(),
+      nivelActual: 1,
+      tradesValidos: 0,
+      tradesEvaluados: 0,
+      infraccionesCriticas: 0,
+      cumplimientoPct: 100,
+      version: 1,
+      bloqueadoModificacion: true,
+      plan,
+      creadoEn: serverTimestamp(),
+    };
+    const ref = await addDoc(collection(db, 'users', currentUser.uid, 'rachas'), rachaData);
+    rachaActiva = { id: ref.id, ...rachaData };
+    showToast('🔥 ¡Racha activada! Comienza a ejecutar tu plan.', 'success');
+    await renderDashboardRacha();
+  } catch(e) {
+    showToast('Error al crear la racha: ' + e.message, 'error');
+  }
+};
+
+window.handleLogout = async () => { await signOut(auth); window.location.href = 'index.html'; };
+window.cargarEvals = cargarEvals;
+window.mostrarHistorial = mostrarHistorial;
+</script>
+
+<script>
+  const savedTheme = localStorage.getItem('tpl-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  if (savedTheme === 'light') document.querySelectorAll('.logo-dark-mode').forEach(l => l.style.filter = 'invert(1)');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('tpl-theme', next);
+    document.querySelectorAll('.logo-dark-mode').forEach(l => l.style.filter = next === 'light' ? 'invert(1)' : '');
+  });
+  window.toggleSidebar = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); };
+  window.closeSidebar = () => { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); };
+
+  window.showRachaTab = function(tab) {
+    document.querySelectorAll('.racha-tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.racha-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('rtab-'+tab)?.classList.add('active');
+    const tabs = ['resumen','evaluaciones','niveles','plan','historial','estadisticas'];
+    document.querySelectorAll('.racha-tab')[tabs.indexOf(tab)]?.classList.add('active');
+    if (tab === 'historial') window.mostrarHistorial?.();
+  };
+
+  window.showToast = function(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  };
+</script>
+</body>
+</html>
