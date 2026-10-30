@@ -1,0 +1,93 @@
+// ============================================================
+// FIRESTORE SECURITY RULES — Journal del Rey (v2 · con planes)
+// Trading Pro Lab
+// ============================================================
+// INSTRUCCIONES:
+// 1. Firebase Console → Firestore Database → pestaña "Reglas"
+// 2. Borra todo y pega este archivo completo
+// 3. Haz clic en "Publicar"
+// ============================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ─────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuth() && request.auth.uid == "VvDyaCX7x1XxQIBDKpghd4UfWai1";
+    }
+
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // Plan del usuario. Sin campo "plan" cuenta como "rey".
+    function planOf(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.get('plan', 'rey');
+    }
+
+    function isRey(uid) {
+      return isOwner(uid) && planOf(uid) == 'rey';
+    }
+
+    // Al registrarse, el plan del usuario debe coincidir con el de la lista blanca.
+    // - Si la lista blanca tiene un documento con ID = correo, manda ese plan.
+    // - Si no existe (alumnos antiguos), solo se permite "rey".
+    function planPermitidoAlCrear() {
+      return exists(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email.lower()))
+        ? request.resource.data.get('plan', 'rey') ==
+            get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email.lower())).data.get('plan', 'rey')
+        : request.resource.data.get('plan', 'rey') == 'rey';
+    }
+
+    // ── /users/{uid} ────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isAdmin() || (isOwner(uid) && planPermitidoAlCrear());
+
+      // El alumno NO puede cambiarse el plan, ni reactivarse, ni cambiar su rol.
+      allow update: if isAdmin() || (isOwner(uid) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'active', 'role']));
+
+      allow delete: if isAdmin();
+
+      // ── Cuentas, operaciones y retiros (Príncipes y Reyes) ──
+      match /accounts/{accountId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+
+        match /trades/{tradeId} {
+          allow read, write: if isOwner(uid) || isAdmin();
+        }
+
+        match /retiros/{retiroId} {
+          allow read, write: if isOwner(uid) || isAdmin();
+        }
+      }
+
+      // ── Racha TPL: SOLO Reyes (y el admin) ──────────────────
+      match /rachas/{rachaId} {
+        allow read, write: if isAdmin() || isRey(uid);
+
+        match /evaluaciones/{evalId} {
+          allow read, write: if isAdmin() || isRey(uid);
+        }
+      }
+
+      match /historialRachas/{histId} {
+        allow read, write: if isAdmin() || isRey(uid);
+      }
+    }
+
+    // ── /allowedEmails — Lista blanca ───────────────────────
+    match /allowedEmails/{docId} {
+      allow write: if isAdmin();
+      // Se lee antes de crear la cuenta (registro), por eso es público.
+      allow read: if true;
+    }
+  }
+}
